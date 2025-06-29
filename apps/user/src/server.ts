@@ -1,6 +1,7 @@
 import express, { Router } from 'express';
 import { HealthController } from './controllers/health.controller';
 import { UsersController } from './controllers/users.controller';
+import { authenticate } from './middlewares';
 import { env } from './utils/env';
 import { logger } from './utils/logger';
 
@@ -13,6 +14,8 @@ app.use(express.json());
 
 route.get('/health', HealthController.healthCheck);
 route.post('/auth/register', new UsersController().register);
+route.post('/auth/signin', new UsersController().signin);
+route.get('/auth/me', authenticate, new UsersController().me);
 
 app.use(route);
 

@@ -19,6 +19,7 @@
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
     "nodemon": "^3.1.10",
     "prettier": "^3.5.1",
     "prisma": "^6.10.1",
@@ -29,6 +30,7 @@
     "bcrypt": "^6.0.0",
     "dotenv": "^17.0.0",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
     "luxon": "^3.6.1",
     "tslog": "^4.9.3",
     "zod": "^3.24.2"

@@ -14,3 +14,9 @@ export const CreateUserSchema = UserSchema.pick({ email: true }).extend({
 });
 
 export type CreateUser = z.infer<typeof CreateUserSchema>;
+
+export const SignInSchema = UserSchema.pick({ email: true }).extend({
+  password: z.string().min(8, 'Password must be at least 8 characters long'),
+});
+
+export type SignIn = z.infer<typeof SignInSchema>;
