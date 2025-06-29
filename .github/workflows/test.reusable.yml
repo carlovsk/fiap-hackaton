@@ -1,0 +1,22 @@
+name: test
+
+on:
+  workflow_call:
+    inputs:
+      service-path:
+        required: true
+        type: string
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - run: cd ${{ inputs.service-path }} && npm ci
+      - run: cd ${{ inputs.service-path }} && npm run lint
+      - run: cd ${{ inputs.service-path }} && npm run type-check
+      - run: cd ${{ inputs.service-path }} && npm test
