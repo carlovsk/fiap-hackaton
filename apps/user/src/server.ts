@@ -15,6 +15,8 @@ app.use(express.json());
 route.get('/health', HealthController.healthCheck);
 route.post('/auth/register', new UsersController().register);
 route.post('/auth/signin', new UsersController().signin);
+route.post('/auth/refresh', new UsersController().refresh);
+route.post('/auth/logout', new UsersController().logout);
 route.get('/auth/me', authenticate, new UsersController().me);
 
 app.use(route);

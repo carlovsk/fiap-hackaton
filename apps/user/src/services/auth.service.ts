@@ -79,4 +79,90 @@ export class AuthService {
 
     return parseInt(value) * multiplier;
   }
+
+  async refresh(refreshToken: string): Promise<{
+    accessToken: string;
+    refreshToken: string;
+  }> {
+    // Verify refresh token
+    let payload: { sub: string };
+    try {
+      payload = jwt.verify(refreshToken, jwtConfig.refreshSecret) as { sub: string };
+    } catch {
+      throw new Error('Invalid or expired refresh token');
+    }
+
+    // Check if refresh token exists in database
+    const storedToken = await prisma.refreshToken.findFirst({
+      where: {
+        token: refreshToken,
+        userId: payload.sub,
+        revoked: false,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!storedToken) {
+      throw new Error('Refresh token not found or revoked');
+    }
+
+    // Revoke the old refresh token
+    await prisma.refreshToken.update({
+      where: { id: storedToken.id },
+      data: { revoked: true },
+    });
+
+    // Generate new tokens
+    const user = await this.findOneById(payload.sub);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return this.signin(user.id);
+  }
+
+  async logout(refreshToken: string): Promise<void> {
+    // Verify refresh token
+    let payload: { sub: string };
+    try {
+      payload = jwt.verify(refreshToken, jwtConfig.refreshSecret) as { sub: string };
+    } catch {
+      throw new Error('Invalid refresh token');
+    }
+
+    // Revoke all refresh tokens for the user
+    await prisma.refreshToken.updateMany({
+      where: {
+        userId: payload.sub,
+        revoked: false,
+      },
+      data: {
+        revoked: true,
+      },
+    });
+  }
+
+  async logoutFromDevice(refreshToken: string): Promise<void> {
+    // Verify refresh token
+    let payload: { sub: string };
+    try {
+      payload = jwt.verify(refreshToken, jwtConfig.refreshSecret) as { sub: string };
+    } catch {
+      throw new Error('Invalid refresh token');
+    }
+
+    // Revoke only the specific refresh token
+    await prisma.refreshToken.updateMany({
+      where: {
+        token: refreshToken,
+        userId: payload.sub,
+        revoked: false,
+      },
+      data: {
+        revoked: true,
+      },
+    });
+  }
 }

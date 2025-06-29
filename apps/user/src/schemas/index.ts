@@ -20,3 +20,15 @@ export const SignInSchema = UserSchema.pick({ email: true }).extend({
 });
 
 export type SignIn = z.infer<typeof SignInSchema>;
+
+export const RefreshTokenSchema = z.object({
+  refreshToken: z.string().min(1, 'Refresh token is required'),
+});
+
+export type RefreshToken = z.infer<typeof RefreshTokenSchema>;
+
+export const LogoutSchema = z.object({
+  refreshToken: z.string().min(1, 'Refresh token is required'),
+});
+
+export type Logout = z.infer<typeof LogoutSchema>;

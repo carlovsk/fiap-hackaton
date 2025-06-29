@@ -1,5 +1,5 @@
 import { Request, RequestHandler, Response } from 'express';
-import { CreateUserSchema, SignInSchema } from '../schemas';
+import { CreateUserSchema, LogoutSchema, RefreshTokenSchema, SignInSchema } from '../schemas';
 import { AuthService } from '../services/auth.service';
 import { logger } from '../utils/logger';
 
@@ -99,5 +99,66 @@ export class UsersController {
       email: user.email,
       id: user.id,
     });
+  };
+
+  refresh: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+    this.logger.info('Refresh endpoint hit', {
+      body: req.body,
+    });
+
+    try {
+      const payload = RefreshTokenSchema.parse(req.body);
+
+      const tokens = await this.authService.refresh(payload.refreshToken);
+
+      res.send({
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      });
+    } catch (error) {
+      this.logger.warn('Refresh token failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      if (error instanceof Error) {
+        if (
+          error.message.includes('Invalid') ||
+          error.message.includes('expired') ||
+          error.message.includes('not found')
+        ) {
+          res.status(401).send({ error: 'Invalid or expired refresh token' });
+          return;
+        }
+      }
+
+      res.status(500).send({ error: 'Internal server error' });
+    }
+  };
+
+  logout: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+    this.logger.info('Logout endpoint hit', {
+      body: req.body,
+    });
+
+    try {
+      const payload = LogoutSchema.parse(req.body);
+
+      await this.authService.logout(payload.refreshToken);
+
+      res.send({ message: 'Logged out successfully' });
+    } catch (error) {
+      this.logger.warn('Logout failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid')) {
+          res.status(401).send({ error: 'Invalid refresh token' });
+          return;
+        }
+      }
+
+      res.status(500).send({ error: 'Internal server error' });
+    }
   };
 }
