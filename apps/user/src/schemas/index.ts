@@ -1,0 +1,16 @@
+import { z } from 'zod';
+
+export const UserSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  passwordHash: z.string(),
+  createdAt: z.date(),
+});
+
+export type User = z.infer<typeof UserSchema>;
+
+export const CreateUserSchema = UserSchema.pick({ email: true }).extend({
+  password: z.string().min(8, 'Password must be at least 8 characters long'),
+});
+
+export type CreateUser = z.infer<typeof CreateUserSchema>;
