@@ -1,0 +1,46 @@
+{
+  "folders": [
+    {
+      "name": "fiap-hackaton",
+      "path": "."
+    },
+  ],
+  "settings": {
+    "cSpell.language": "en,pt-BR",
+    "files.watcherExclude": {
+      "**/.build/**": true,
+      "**/.dist/**": true,
+      "**/.esbuild/**": true,
+      "**/.eslintcache": true,
+      "**/.serverless/**": true,
+      "**/coverage/**": true
+    },
+    "search.exclude": {
+      "**/.build/**": true,
+      "**/.dist/**": true,
+      "**/.esbuild/**": true,
+      "**/.eslintcache": true,
+      "**/.serverless/**": true,
+      "**/coverage/**": true
+    },
+	"explorer.fileNesting.enabled": false,
+  },
+  "extensions": {
+    "recommendations": [
+      "aaron-bond.better-comments",
+      "aws-scripting-guy.cform",
+      "mikestead.dotenv",
+      "dbaeumer.vscode-eslint",
+      "me-dutour-mathieu.vscode-github-actions",
+      "GitHub.vscode-pull-request-github",
+      "wix.vscode-import-cost",
+      "firsttris.vscode-jest-runner",
+      "christian-kohler.npm-intellisense",
+      "esbenp.prettier-vscode",
+      "ThreadHeap.serverless-ide-vscode",
+      "SonarSource.sonarlint-vscode",
+      "redhat.vscode-yaml",
+      "pflannery.vscode-versionlens"
+    ]
+  }
+}
