@@ -8,7 +8,7 @@ on:
         type: string
 
 jobs:
-  lint-and-test:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,7 +16,6 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
-      - run: cd ${{ inputs.service-path }} && npm ci
-      - run: cd ${{ inputs.service-path }} && npm run lint
-      - run: cd ${{ inputs.service-path }} && npm run type-check
-      - run: cd ${{ inputs.service-path }} && npm test
+      - run: npm ci
+      - run: npm run lint:ci -w ${{ inputs.service-path }}
+      - run: npm run typecheck:ci -w ${{ inputs.service-path }}
