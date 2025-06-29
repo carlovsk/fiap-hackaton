@@ -4,6 +4,10 @@
       "name": "fiap-hackaton",
       "path": "."
     },
+    {
+      "name": "user",
+      "path": "apps/user"
+    }
   ],
   "settings": {
     "cSpell.language": "en,pt-BR",

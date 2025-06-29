@@ -4,8 +4,8 @@
     "lib": [
       "es2021"
     ],
-    "module": "NodeNext",
-    "moduleResolution": "nodenext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "target": "es2021",
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
@@ -21,16 +21,20 @@
     "preserveConstEnums": true,
     "removeComments": true,
     "resolveJsonModule": true,
-    "rootDir": "./",
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
     "strictNullChecks": true,
-    "baseUrl": "./",
-    "paths": {
-      "@/*": ["src/*"]
-    }
+    "allowImportingTsExtensions": false,
+    "verbatimModuleSyntax": false
   },
-  "include": ["apps/**/*.ts","packages/**/*.ts"],
-  "exclude": ["node_modules", ".dist", "jest.config.js"]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".dist",
+    "jest.config.js",
+    ".sst/**/*"
+  ]
 }
