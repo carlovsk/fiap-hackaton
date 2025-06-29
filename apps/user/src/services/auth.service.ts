@@ -116,6 +116,7 @@ export class AuthService {
 
     // Generate new tokens
     const user = await this.findOneById(payload.sub);
+
     if (!user) {
       throw new Error('User not found');
     }
@@ -135,28 +136,6 @@ export class AuthService {
     // Revoke all refresh tokens for the user
     await prisma.refreshToken.updateMany({
       where: {
-        userId: payload.sub,
-        revoked: false,
-      },
-      data: {
-        revoked: true,
-      },
-    });
-  }
-
-  async logoutFromDevice(refreshToken: string): Promise<void> {
-    // Verify refresh token
-    let payload: { sub: string };
-    try {
-      payload = jwt.verify(refreshToken, jwtConfig.refreshSecret) as { sub: string };
-    } catch {
-      throw new Error('Invalid refresh token');
-    }
-
-    // Revoke only the specific refresh token
-    await prisma.refreshToken.updateMany({
-      where: {
-        token: refreshToken,
         userId: payload.sub,
         revoked: false,
       },
