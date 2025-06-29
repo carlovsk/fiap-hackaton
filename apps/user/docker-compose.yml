@@ -6,11 +6,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/usersdb
+      - DATABASE_URL=postgresql://postgres:postgres@database:5432/usersdb
       - PORT=3000
     volumes:
       - .:/app
-      - /app/node_modules     # Prevent node_modules override from host
+      - /app/node_modules
     command: ["npm", "run", "dev"]
     depends_on:
       - database
@@ -30,8 +30,23 @@ services:
     networks:
       - app-network
 
+  pgadmin:
+    image: dpage/pgadmin4
+    ports:
+      - "8080:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - database
+    networks:
+      - app-network
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
 volumes:
   pgdata:
+  pgadmin_data:
 
 networks:
   app-network:
