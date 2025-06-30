@@ -23,6 +23,7 @@ describe('HealthController', () => {
 
       expect(mockRes.json).toHaveBeenCalledWith({
         healthy: true,
+        service: 'worker',
         timestamp: mockDate.toISOString(),
       });
     });
