@@ -2,17 +2,17 @@ name: User
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - apps/user/**
-      - .github/workflows/user.yml
-      - .github/workflows/*.reusable.yml
-  pull_request:
-    paths:
-      - services/user/**
-      - .github/workflows/user.yml
-      - .github/workflows/*.reusable.yml
+    branches: [main]
+  #     - main
+  #   paths:
+  #     - apps/user/**
+  #     - .github/workflows/user.yml
+  #     - .github/workflows/*.reusable.yml
+  # pull_request:
+  #   paths:
+  #     - apps/user/**
+  #     - .github/workflows/user.yml
+  #     - .github/workflows/*.reusable.yml
 
 jobs:
   tests:
