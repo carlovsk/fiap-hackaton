@@ -11,6 +11,10 @@
     {
       "name": "video",
       "path": "apps/video"
+    },
+    {
+      "name": "worker",
+      "path": "apps/worker"
     }
   ],
   "settings": {
