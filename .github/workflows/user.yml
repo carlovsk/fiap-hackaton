@@ -13,13 +13,6 @@ on:
       - services/user/**
       - .github/workflows/user.yml
       - .github/workflows/*.reusable.yml
-  delete:
-    paths:
-      - services/user/**
-      - .github/workflows/user.yml
-      - .github/workflows/*.reusable.yml
-    branches-ignore:
-      - main
 
 jobs:
   tests:
