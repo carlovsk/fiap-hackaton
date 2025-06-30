@@ -80,10 +80,10 @@ export class UsersController {
 
   me: RequestHandler = async (req: Request, res: Response): Promise<void> => {
     this.logger.info('Me endpoint hit', {
-      user: req.user.sub,
+      user: req.user?.sub,
     });
 
-    if (!req.user.sub) {
+    if (!req.user?.sub) {
       res.status(401).send({ error: 'Unauthorized' });
       return;
     }
