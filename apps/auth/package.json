@@ -1,5 +1,5 @@
 {
-  "name": "@fiap-hackaton/user",
+  "name": "@fiap-hackaton/auth",
   "version": "1.0.0",
   "type": "module",
   "scripts": {

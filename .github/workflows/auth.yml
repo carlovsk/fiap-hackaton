@@ -1,21 +1,21 @@
-name: User
+name: auth
 
 on:
   push:
     branches: [main]
     paths:
-      - apps/user/**
-      - .github/workflows/user.yml
+      - apps/auth/**
+      - .github/workflows/auth.yml
       - .github/workflows/test.reusable.yml
   pull_request:
     paths:
-      - apps/user/**
-      - .github/workflows/user.yml
+      - apps/auth/**
+      - .github/workflows/auth.yml
       - .github/workflows/test.reusable.yml
 
 jobs:
   tests:
     uses: ./.github/workflows/test.reusable.yml
     with:
-      service-path: apps/user
+      service-path: apps/auth
     secrets: inherit

@@ -5,8 +5,8 @@
       "path": "."
     },
     {
-      "name": "user",
-      "path": "apps/user"
+      "name": "auth",
+      "path": "apps/auth"
     }
   ],
   "settings": {
