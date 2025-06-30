@@ -69,7 +69,7 @@ export class UsersController {
     const tokens = await this.authService.signin(user.id);
 
     res.send({
-      acceessToken: tokens.accessToken,
+      accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       user: {
         email: user.email,

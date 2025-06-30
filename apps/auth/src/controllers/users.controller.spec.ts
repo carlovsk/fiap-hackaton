@@ -181,7 +181,7 @@ describe('UsersController', () => {
       expect(mockAuthService.comparePassword).toHaveBeenCalledWith(password, user.passwordHash);
       expect(mockAuthService.signin).toHaveBeenCalledWith(user.id);
       expect(mockRes.send).toHaveBeenCalledWith({
-        acceessToken: tokens.accessToken,
+        accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         user: {
           email: user.email,
