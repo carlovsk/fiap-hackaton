@@ -7,6 +7,10 @@
     {
       "name": "auth",
       "path": "apps/auth"
+    },
+    {
+      "name": "video",
+      "path": "apps/video"
     }
   ],
   "settings": {

@@ -1,0 +1,42 @@
+{
+  "name": "@fiap-hackaton/video",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon --watch src --ext ts --exec tsx src/server.ts",
+    "build": "tsc",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "lint:check": "eslint src/**/*.ts --max-warnings 0",
+    "format": "prettier --write src/**/*.ts",
+    "format:check": "prettier --check src/**/*.ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "test": "vitest --run --coverage",
+    "test:watch": "vitest --watch"
+  },
+  "eslintConfig": {
+    "extends": "./.eslintrc.cjs"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^9.8.0",
+    "@types/bcrypt": "^5.0.2",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@vitest/coverage-v8": "^3.2.4",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.5.1",
+    "prisma": "^6.10.1",
+    "tsx": "^4.20.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.10.1",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.0.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "luxon": "^3.6.1",
+    "tslog": "^4.9.3",
+    "zod": "^3.24.2"
+  }
+}
