@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid';
 import { prisma } from '../database/prisma';
+import { EventService } from './event.service';
 import { UploadService } from './upload.service';
 
 export class StorageService {
@@ -30,7 +31,17 @@ export class StorageService {
       },
     });
 
-    // TODO: implement video processing event here
+    const eventService = await EventService.instantiate();
+
+    await eventService.sendEvent({
+      type: 'video.uploaded',
+      payload: {
+        videoId,
+        userId,
+        filename: originalName,
+        key,
+      },
+    });
 
     return video;
   }
