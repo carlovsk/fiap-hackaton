@@ -12,6 +12,9 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_BUCKET=videos
+      - JWT_ACCESS_SECRET=your_access_secret
+      - JWT_REFRESH_SECRET=your_refresh_secret
+      - AWS_REGION=us-east-1
     volumes:
       - .:/app
       - /app/node_modules

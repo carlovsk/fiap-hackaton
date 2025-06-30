@@ -8,7 +8,10 @@ export const env = z
     PORT: z.coerce.number(),
     JWT_ACCESS_SECRET: z.coerce.string(),
     JWT_REFRESH_SECRET: z.coerce.string(),
-    JWT_ACCESS_EXPIRES_IN: z.coerce.string(),
-    JWT_REFRESH_EXPIRES_IN: z.coerce.string(),
+    MINIO_ENDPOINT: z.coerce.string(),
+    MINIO_ACCESS_KEY: z.coerce.string(),
+    MINIO_SECRET_KEY: z.coerce.string(),
+    MINIO_BUCKET: z.coerce.string(),
+    AWS_REGION: z.coerce.string(),
   })
   .parse(process.env);

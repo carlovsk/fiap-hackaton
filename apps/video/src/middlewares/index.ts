@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import multer from 'multer';
 import { jwtConfig } from '../config/jwt';
 
 export interface AuthenticatedRequest extends Request {
@@ -25,3 +26,8 @@ export function authenticate(req: AuthenticatedRequest, res: Response, next: Nex
     res.status(401).json({ message: 'Invalid or expired token' });
   }
 }
+
+export const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+});
