@@ -11,13 +11,10 @@
     "type-check": "tsc --noEmit",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
-    "lint:ci": "npm run lint -w",
     "test": "npm run test --workspaces --if-present",
     "test:fix": "npm run test:fix --workspaces --if-present",
-    "test:ci": "npm run test -w",
     "format": "npm run format --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "typecheck:ci": "npm run typecheck -w",
     "clean": "npm run clean --workspaces --if-present",
     "build": "npm run build --workspaces --if-present"
   },

@@ -3,16 +3,15 @@ name: User
 on:
   push:
     branches: [main]
-  #     - main
-  #   paths:
-  #     - apps/user/**
-  #     - .github/workflows/user.yml
-  #     - .github/workflows/*.reusable.yml
-  # pull_request:
-  #   paths:
-  #     - apps/user/**
-  #     - .github/workflows/user.yml
-  #     - .github/workflows/*.reusable.yml
+    paths:
+      - apps/user/**
+      - .github/workflows/user.yml
+      - .github/workflows/test.reusable.yml
+  pull_request:
+    paths:
+      - apps/user/**
+      - .github/workflows/user.yml
+      - .github/workflows/test.reusable.yml
 
 jobs:
   tests:
@@ -20,4 +19,3 @@ jobs:
     with:
       service-path: apps/user
     secrets: inherit
-    if: ${{ !contains(fromJSON('["delete", "workflow_dispatch"]'), github.event_name) }}
