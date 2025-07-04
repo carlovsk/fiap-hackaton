@@ -11,11 +11,13 @@ export class EventService {
   private constructor(connection: amqplib.ChannelModel, channel: amqplib.Channel) {
     this.connection = connection;
     this.channel = channel;
+
+    this.logger.info(`EventService initialized with queue: ${EventService.QUEUE_NAME}`);
   }
 
   static async instantiate(): Promise<EventService> {
     // TODO: move to env
-    const connection = await amqplib.connect('amqp://localhost');
+    const connection = await amqplib.connect('amqp://rabbitmq:5672');
 
     const channel = await connection.createChannel();
 
@@ -28,6 +30,8 @@ export class EventService {
     if (!this.channel) {
       throw new Error('Channel is not initialized');
     }
+
+    this.logger.info(`Sending event to queue: ${EventService.QUEUE_NAME}`, payload);
 
     const messageBuffer = Buffer.from(JSON.stringify(payload));
 
