@@ -80,7 +80,7 @@ export class WorkerController {
             videoId: payload.videoId,
             userId: payload.userId,
             status: 'COMPLETED',
-            downloadKey: framesZipPath,
+            downloadKey: framesZipKey,
           },
         }),
       ),
