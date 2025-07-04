@@ -84,4 +84,27 @@ export class VideosController {
       videoId: payload.videoId,
     });
   };
+
+  download: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user?.sub;
+    const videoId = req.params.id;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const { content } = await this.storageService.download({
+      userId,
+      videoId,
+    });
+    try {
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${videoId}.zip"`);
+      res.status(200).send(content);
+    } catch (err) {
+      console.error('Download failed:', err);
+      res.status(500).json({ message: 'Error downloading file' });
+    }
+  };
 }

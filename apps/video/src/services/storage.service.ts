@@ -46,6 +46,42 @@ export class StorageService {
     return video;
   }
 
+  async download({ userId, videoId }: { userId: string; videoId: string }) {
+    const video = await this.findOne({
+      videoId,
+      userId,
+    });
+
+    if (!video || video.userId !== userId) {
+      throw new Error('Video not found');
+    }
+
+    if (video.status !== 'COMPLETED' || !video.downloadKey) {
+      throw new Error('Video is not ready for download');
+    }
+
+    const file = await this.uploadService.downloadFile(video.downloadKey);
+
+    if (!file) {
+      throw new Error('File not found');
+    }
+
+    return {
+      filename: video.filename,
+      content: file,
+      downloadKey: video.downloadKey,
+    };
+  }
+
+  async findOne({ userId, videoId }: { userId: string; videoId: string }) {
+    const video = await prisma.video.findUnique({
+      where: { id: videoId, userId },
+      select: { id: true, filename: true, status: true, downloadKey: true, createdAt: true, userId: true },
+    });
+
+    return video;
+  }
+
   async list(userId: string): Promise<Array<{ id: string; filename: string; status: string }>> {
     const videos = await prisma.video.findMany({
       where: { userId },

@@ -1,4 +1,5 @@
-import { CreateBucketCommand, NoSuchBucket, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { CreateBucketCommand, GetObjectCommand, NoSuchBucket, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { buffer } from 'stream/consumers';
 import { env } from '../utils/env';
 import { logger } from '../utils/logger';
 
@@ -47,6 +48,21 @@ export class UploadService {
 
       throw error;
     }
+  }
+
+  async downloadFile(key: string): Promise<Buffer> {
+    const command = new GetObjectCommand({
+      Bucket: env.MINIO_BUCKET,
+      Key: key,
+    });
+
+    const response = await this.s3Client.send(command);
+
+    if (!response.Body) {
+      throw new Error(`File not found: ${key}`);
+    }
+
+    return await buffer(response.Body as NodeJS.ReadableStream);
   }
 
   private async createBucketIfNotExists(): Promise<void> {

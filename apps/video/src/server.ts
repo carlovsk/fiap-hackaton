@@ -21,6 +21,7 @@ app.use(express.json());
 route.get('/health', HealthController.healthCheck);
 route.get('/videos/status', authenticate, new VideosController().list);
 route.post('/videos/upload', authenticate, upload.single('file'), new VideosController().upload);
+route.get('/videos/:id/download', authenticate, new VideosController().download);
 
 app.use(route);
 
