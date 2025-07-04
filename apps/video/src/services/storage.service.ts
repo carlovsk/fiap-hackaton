@@ -54,4 +54,16 @@ export class StorageService {
 
     return videos;
   }
+
+  async updateStatus(
+    videoId: string,
+    { status, downloadKey }: { status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'; downloadKey?: string },
+  ) {
+    const video = await prisma.video.update({
+      where: { id: videoId },
+      data: { status, downloadKey },
+    });
+
+    return video;
+  }
 }

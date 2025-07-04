@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 // src/consumer.ts
 import amqplib from 'amqplib';
-import { WorkerController } from './controllers/worker.controller';
-import { QueuePayloadSchema } from './schemas/queue.schema';
+import { VideosController } from './controllers/video.controller';
+import { QueuePayloadSchema, VideoProcessedPayloadSchema } from './schemas/queue.schema';
 import { logger } from './utils/logger';
 
 // TODO: move this to env variable
@@ -18,7 +19,7 @@ export async function startConsumer() {
 
   await channel.bindQueue(queue, EXCHANGE, '');
 
-  logger('consumer').info(`Worker is listening for messages on ${EXCHANGE}`);
+  logger('consumer').info(`Video is listening for messages on ${EXCHANGE}`);
 
   channel.consume(queue, async (msg) => {
     if (!msg) return;
@@ -26,9 +27,15 @@ export async function startConsumer() {
     const content = msg.content.toString();
     const event = QueuePayloadSchema.parse(JSON.parse(content));
 
-    logger('consumer').info(`Received event of type ${event.type}:`, event);
+    logger('consumer').info(`Received event: ${event.type}`, event.payload);
 
-    await new WorkerController(channel).handleEvent(event);
+    switch (event.type) {
+      case 'video.processed':
+        await new VideosController().handleProcessedVideo(VideoProcessedPayloadSchema.parse(event.payload));
+        break;
+      default:
+        logger('consumer').warn(`Unhandled event type: ${event.type}`);
+    }
 
     channel.ack(msg);
   });

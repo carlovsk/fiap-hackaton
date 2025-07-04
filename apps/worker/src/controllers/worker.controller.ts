@@ -1,15 +1,20 @@
+import amqplib from 'amqplib';
 import os from 'os';
 import path from 'path';
 import { QueuePayload, VideoUploadedPayload, VideoUploadedPayloadSchema } from '../schemas/queue.schema';
 import { FileService } from '../services/upload.service';
 import { logger } from '../utils/logger';
 
+const EXCHANGE = 'VIDEO_EVENTS_QUEUE';
+
 export class WorkerController {
   logger = logger('controllers:worker');
   fileService: FileService;
+  channel: amqplib.Channel;
 
-  constructor() {
+  constructor(channel: amqplib.Channel) {
     this.fileService = new FileService();
+    this.channel = channel;
   }
 
   async handleEvent(event: QueuePayload): Promise<void> {
@@ -58,5 +63,31 @@ export class WorkerController {
       contentType: 'application/zip',
       path: framesZipPath,
     });
+
+    this.logger.info('Frames zip uploaded successfully', {
+      framesZipKey,
+      userId: payload.userId,
+      videoId: payload.videoId,
+    });
+
+    this.channel.publish(
+      EXCHANGE,
+      '',
+      Buffer.from(
+        JSON.stringify({
+          type: 'video.processed',
+          payload: {
+            videoId: payload.videoId,
+            userId: payload.userId,
+            status: 'COMPLETED',
+            downloadKey: framesZipPath,
+          },
+        }),
+      ),
+      {
+        persistent: true,
+        contentType: 'application/json',
+      },
+    );
   }
 }

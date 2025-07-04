@@ -1,4 +1,5 @@
 import { Request, RequestHandler, Response } from 'express';
+import { VideoProcessedPayload } from '../schemas/queue.schema';
 import { StorageService } from '../services/storage.service';
 import { logger } from '../utils/logger';
 
@@ -63,6 +64,24 @@ export class VideosController {
         filename: video.filename,
         status: video.status,
       },
+    });
+  };
+
+  /**
+   * This one is called by the worker when the video processing is done. Is not an endpoint.
+   */
+  handleProcessedVideo = async (payload: VideoProcessedPayload): Promise<void> => {
+    this.logger.info('Processing video completed', payload);
+
+    // Here you can implement any logic needed after the video is processed
+    // For example, updating the video status in the database or notifying the user
+    await this.storageService.updateStatus(payload.videoId, {
+      status: payload.status,
+      downloadKey: payload.downloadKey,
+    });
+
+    this.logger.info('Video status updated to processed', {
+      videoId: payload.videoId,
     });
   };
 }
