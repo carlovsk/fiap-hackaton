@@ -9,20 +9,36 @@ export class MessageConsumer {
   private connection: amqplib.ChannelModel | null = null;
   private logger = logger('messaging:consumer');
 
+  private readonly MAX_RETRIES = 5;
+  private readonly RETRY_DELAY_MS = 3000;
+
   async connect(): Promise<void> {
-    try {
-      this.connection = await amqplib.connect(env.RABBITMQ_URL);
+    let retries = this.MAX_RETRIES;
 
-      this.channel = await this.connection.createChannel();
+    while (retries > 0) {
+      try {
+        this.connection = await amqplib.connect(env.RABBITMQ_URL);
+        this.channel = await this.connection.createChannel();
 
-      await this.channel.assertExchange(env.VIDEO_EVENTS_EXCHANGE, 'fanout', {
-        durable: true,
-      });
+        await this.channel.assertExchange(env.VIDEO_EVENTS_EXCHANGE, 'fanout', {
+          durable: true,
+        });
 
-      this.logger.info('Message consumer connected successfully');
-    } catch (error) {
-      this.logger.error('Failed to connect message consumer:', error);
-      throw error;
+        this.logger.info('Message consumer connected successfully');
+        return;
+      } catch (error) {
+        retries--;
+        this.logger.warn(
+          `Failed to connect to RabbitMQ (${this.MAX_RETRIES - retries}/${this.MAX_RETRIES}): ${error instanceof Error ? error.message : String(error)}`,
+        );
+
+        if (retries === 0) {
+          this.logger.error('Max retries reached. Giving up.');
+          throw error;
+        }
+
+        await new Promise((res) => setTimeout(res, this.RETRY_DELAY_MS));
+      }
     }
   }
 
@@ -31,7 +47,6 @@ export class MessageConsumer {
       throw new Error('Consumer not connected');
     }
 
-    // Create an exclusive, auto-deleted queue just for this service instance
     const { queue } = await this.channel.assertQueue('', { exclusive: true });
 
     await this.channel.bindQueue(queue, env.VIDEO_EVENTS_EXCHANGE, '');
@@ -41,18 +56,28 @@ export class MessageConsumer {
     this.channel.consume(queue, async (msg) => {
       if (!msg) return;
 
+      let eventType = 'unknown';
+      let videoId: string | undefined;
+
       try {
         const content = msg.content.toString();
         const event = QueuePayloadSchema.parse(JSON.parse(content));
 
-        this.logger.info(`Received event: ${event.type}`, event.payload);
+        eventType = event.type;
+        videoId = event.payload?.videoId;
+
+        this.logger.info('Event received', { type: eventType, videoId });
 
         await this.handleEvent(event);
 
         this.channel!.ack(msg);
       } catch (error) {
-        this.logger.error('Error processing message:', error);
-        this.channel!.nack(msg, false, false); // Don't requeue failed messages
+        this.logger.error('Message processing failed', {
+          type: eventType,
+          videoId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        this.channel!.nack(msg, false, false); // Do not requeue
       }
     });
   }
