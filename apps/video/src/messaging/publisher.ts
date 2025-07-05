@@ -38,7 +38,7 @@ export class MessagePublisher {
       contentType: 'application/json',
     });
 
-    this.logger.info(`Published event: ${eventType}`, payload);
+    this.logger.info('Event published', { eventType, videoId: payload?.videoId });
   }
 
   async disconnect(): Promise<void> {

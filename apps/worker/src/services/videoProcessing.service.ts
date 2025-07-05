@@ -16,7 +16,11 @@ export class VideoProcessingService {
   }
 
   async processVideo(payload: VideoUploadedPayload): Promise<void> {
-    this.logger.info('Processing uploaded video', payload);
+    this.logger.info('Starting video processing', {
+      videoId: payload.videoId,
+      userId: payload.userId,
+      filename: payload.filename,
+    });
 
     const tempDir = path.join(os.tmpdir(), payload.userId, payload.videoId);
     const videoPath = path.join(tempDir, 'video.mp4');
@@ -26,41 +30,30 @@ export class VideoProcessingService {
 
     try {
       // Download the video file
+      this.logger.info('Downloading video file', { videoId: payload.videoId, key: payload.key });
       await this.fileService.downloadFile({
         key: payload.key,
         targetPath: videoPath,
       });
 
-      this.logger.info('File downloaded successfully', {
-        videoId: payload.videoId,
-        userId: payload.userId,
-        filename: payload.filename,
-      });
-
       // Extract frames from video
+      this.logger.info('Extracting frames', { videoId: payload.videoId });
       await this.fileService.extractFrames(videoPath, framesDir);
 
       // Zip the frames
+      this.logger.info('Compressing frames', { videoId: payload.videoId });
       await this.fileService.zipDirectory(framesDir, framesZipPath);
 
-      this.logger.info('Frames extracted and zipped successfully', {
-        zipPath: framesZipPath,
-      });
-
       // Upload the frames zip to storage
+      this.logger.info('Uploading processed frames', { videoId: payload.videoId, key: framesZipKey });
       await this.fileService.uploadFile({
         key: framesZipKey,
         contentType: 'application/zip',
         path: framesZipPath,
       });
 
-      this.logger.info('Frames zip uploaded successfully', {
-        framesZipKey,
-        userId: payload.userId,
-        videoId: payload.videoId,
-      });
-
       // Publish video processed event
+      this.logger.info('Publishing completion event', { videoId: payload.videoId });
       await this.publishVideoProcessedEvent({
         videoId: payload.videoId,
         userId: payload.userId,
@@ -68,18 +61,19 @@ export class VideoProcessingService {
         downloadKey: framesZipKey,
       });
 
-      this.logger.info('Video processing completed successfully', {
+      this.logger.info('Video processing completed', {
         videoId: payload.videoId,
         userId: payload.userId,
       });
     } catch (error) {
-      this.logger.error('Failed to process video', {
-        error,
+      this.logger.error('Video processing failed', {
         videoId: payload.videoId,
         userId: payload.userId,
+        error: error instanceof Error ? error.message : String(error),
       });
 
       // Publish video processing failed event
+      this.logger.info('Publishing failure event', { videoId: payload.videoId });
       await this.publishVideoProcessedEvent({
         videoId: payload.videoId,
         userId: payload.userId,
@@ -103,11 +97,14 @@ export class VideoProcessingService {
 
       await this.messagePublisher.publish('video.processed', payload);
 
-      this.logger.info('Video processed event published', payload);
+      this.logger.info('Video processed event published', {
+        videoId: payload.videoId,
+        status: payload.status,
+      });
     } catch (error) {
       this.logger.error('Failed to publish video processed event', {
-        error,
-        payload,
+        videoId: payload.videoId,
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }

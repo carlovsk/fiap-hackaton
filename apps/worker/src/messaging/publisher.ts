@@ -41,7 +41,7 @@ export class MessagePublisher {
 
       this.logger.info('Message published successfully', {
         eventType,
-        payload,
+        videoId: payload?.videoId,
       });
     } catch (error) {
       this.logger.error('Failed to publish message:', { error, eventType, payload });

@@ -10,6 +10,7 @@ const app = express();
 
 // Start messaging consumer
 const consumer = new MessageConsumer();
+
 consumer
   .connect()
   .then(() => consumer.startListening())

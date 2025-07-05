@@ -18,12 +18,17 @@ export class VideoService {
   }
 
   async listVideos(userId: string): Promise<VideoData[]> {
-    return await this.videoRepository.findByUserId(userId);
+    this.logger.info('Listing videos', { userId });
+    const videos = await this.videoRepository.findByUserId(userId);
+    this.logger.info('Videos listed', { userId, count: videos.length });
+    return videos;
   }
 
   async uploadVideo(userId: string, file: Express.Multer.File): Promise<VideoData> {
     const videoId = uuid();
     const originalName = file.originalname;
+
+    this.logger.info('Starting video upload', { userId, videoId, filename: originalName });
 
     // Build file key for storage
     const key = this.buildFileKey({ userId, videoId, fileName: originalName });
@@ -49,11 +54,7 @@ export class VideoService {
       key,
     });
 
-    this.logger.info('Video uploaded successfully', {
-      videoId,
-      userId,
-      filename: originalName,
-    });
+    this.logger.info('Video upload completed', { videoId, userId, filename: originalName });
 
     return video;
   }
@@ -66,21 +67,28 @@ export class VideoService {
     content: Buffer;
     downloadKey: string;
   } | null> {
+    this.logger.info('Getting video download', { videoId, userId });
+
     const video = await this.videoRepository.findById(videoId);
 
     if (!video || video.userId !== userId) {
+      this.logger.warn('Video not found or access denied', { videoId, userId });
       return null;
     }
 
     if (video.status !== 'COMPLETED' || !video.downloadKey) {
+      this.logger.warn('Video not ready for download', { videoId, status: video.status });
       return null;
     }
 
     const file = await this.uploadService.downloadFile(video.downloadKey);
 
     if (!file) {
+      this.logger.error('Failed to download file from storage', { videoId, downloadKey: video.downloadKey });
       return null;
     }
+
+    this.logger.info('Video download prepared', { videoId, userId, filename: video.filename });
 
     return {
       filename: video.filename,
@@ -90,12 +98,14 @@ export class VideoService {
   }
 
   async markVideoAsProcessed(payload: VideoProcessedPayload): Promise<void> {
+    this.logger.info('Marking video as processed', { videoId: payload.videoId, status: payload.status });
+
     await this.videoRepository.updateById(payload.videoId, {
       status: payload.status,
       downloadKey: payload.downloadKey,
     });
 
-    this.logger.info('Video marked as processed', {
+    this.logger.info('Video processing status updated', {
       videoId: payload.videoId,
       status: payload.status,
     });
@@ -113,10 +123,15 @@ export class VideoService {
     key: string;
   }): Promise<void> {
     try {
+      this.logger.info('Publishing video uploaded event', { videoId: payload.videoId });
       await this.messagePublisher.connect();
       await this.messagePublisher.publish('video.uploaded', payload);
+      this.logger.info('Video uploaded event published', { videoId: payload.videoId });
     } catch (error) {
-      this.logger.error('Failed to publish video uploaded event:', error);
+      this.logger.error('Failed to publish video uploaded event', {
+        videoId: payload.videoId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       // Don't throw - video is already saved, just log the messaging failure
     }
   }

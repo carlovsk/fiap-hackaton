@@ -11,22 +11,31 @@ export class WorkerController {
   }
 
   async handleEvent(event: QueuePayload): Promise<void> {
+    this.logger.info('Received event', { type: event.type, videoId: event.payload?.videoId });
+
     try {
       switch (event.type) {
         case 'video.uploaded':
-          this.logger.info('Handling video uploaded event', { videoId: event.payload.videoId });
           await this.processUploadedVideo(VideoUploadedPayloadSchema.parse(event.payload));
           break;
         default:
-          this.logger.warn(`Unhandled event type: ${event.type}`);
+          this.logger.warn('Unhandled event type', { type: event.type });
       }
+
+      this.logger.info('Event handled successfully', { type: event.type, videoId: event.payload?.videoId });
     } catch (error) {
-      this.logger.error('Failed to handle event', { error, event });
+      this.logger.error('Event handling failed', {
+        type: event.type,
+        videoId: event.payload?.videoId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
 
   private async processUploadedVideo(payload: VideoUploadedPayload): Promise<void> {
+    this.logger.info('Processing uploaded video', { videoId: payload.videoId, userId: payload.userId });
     await this.videoProcessingService.processVideo(payload);
+    this.logger.info('Video processing delegated', { videoId: payload.videoId });
   }
 }
