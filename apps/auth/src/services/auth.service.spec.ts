@@ -7,7 +7,24 @@ import { jwtConfig } from '../config/jwt';
 import { prisma } from '../database/prisma';
 import { AuthService } from './auth.service';
 
-vi.mock('../database/prisma');
+vi.mock('../database/prisma.ts', () => ({
+  prisma: {
+    refreshToken: {
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    user: {
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+    },
+  },
+}));
 vi.mock('../config/jwt', () => ({
   jwtConfig: {
     accessSecret: faker.string.alpha(32),
