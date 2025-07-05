@@ -2,6 +2,24 @@ import { faker } from '@faker-js/faker';
 import { beforeEach, describe, expect, it, vi, type MockedFunction } from 'vitest';
 import { UsersController } from './users.controller';
 
+vi.mock('../database/prisma.ts', () => ({
+  prisma: {
+    refreshToken: {
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    user: {
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+    },
+  },
+}));
 vi.mock('../services/auth.service');
 vi.mock('../utils/logger', () => ({
   logger: () => ({
