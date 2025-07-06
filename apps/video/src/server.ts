@@ -3,6 +3,7 @@ import { HealthController } from './controllers/health.controller';
 import { VideosController } from './controllers/video.controller';
 import { startConsumer } from './messages';
 import { authenticate, upload } from './middlewares';
+import { startMetricsServer } from './monitoring/metrics';
 import { env } from './utils/env';
 import { logger } from './utils/logger';
 
@@ -26,3 +27,5 @@ route.get('/videos/:id/download', authenticate, new VideosController().download)
 app.use(route);
 
 app.listen(env.PORT, () => logger('server').info(`Server is running on port ${env.PORT}`));
+
+startMetricsServer(env.METRICS_PORT || 8080);

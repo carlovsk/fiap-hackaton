@@ -13,5 +13,6 @@ export const env = z
     MINIO_SECRET_KEY: z.coerce.string(),
     MINIO_BUCKET: z.coerce.string(),
     AWS_REGION: z.coerce.string(),
+    METRICS_PORT: z.coerce.number().default(8080),
   })
   .parse(process.env);
