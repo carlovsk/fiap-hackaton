@@ -1,109 +1,118 @@
 import { Request, RequestHandler, Response } from 'express';
-import { VideoProcessedPayload } from '../schemas/queue.schema';
-import { StorageService } from '../services/storage.service';
+import { VideoService } from '../services/video.service';
 import { logger } from '../utils/logger';
 
 export class VideosController {
-  logger = logger('controllers:videos');
-  storageService: StorageService;
+  private logger = logger('controllers:videos');
+  private videoService: VideoService;
 
-  constructor() {
-    this.storageService = new StorageService();
+  constructor(videoService?: VideoService) {
+    this.videoService = videoService || new VideoService();
   }
 
   list: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    this.logger.info('Register endpoint hit', {
-      user: req.user,
-    });
-
     const userId = req.user?.sub;
+    this.logger.info('List videos request', { userId });
 
-    if (!userId) {
-      res.status(401).json({ message: 'Unauthorized' });
-      return;
+    try {
+      if (!userId) {
+        this.logger.warn('Unauthorized access attempt');
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
+      }
+
+      const videos = await this.videoService.listVideos(userId);
+
+      this.logger.info('List videos completed', { userId, count: videos.length });
+      res.status(200).json({ videos });
+    } catch (error) {
+      this.logger.error('List videos failed', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({ message: 'Internal server error' });
     }
-
-    const videos = await this.storageService.list(userId);
-
-    res.status(200).json({ videos });
   };
 
   upload: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    this.logger.info('Upload endpoint hit', {
-      user: req.user,
-      file: req.file,
-    });
-
     const userId = req.user?.sub;
+    const filename = req.file?.originalname;
+    this.logger.info('Upload video request', { userId, filename });
 
-    if (!userId) {
-      res.status(401).json({ message: 'Unauthorized' });
-      return;
-    }
+    try {
+      if (!userId) {
+        this.logger.warn('Unauthorized upload attempt');
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
+      }
 
-    if (!req.file) {
-      res.status(400).json({ message: 'No file provided' });
-      return;
-    }
+      if (!req.file) {
+        this.logger.warn('Upload attempt without file', { userId });
+        res.status(400).json({ message: 'No file provided' });
+        return;
+      }
 
-    const video = await this.storageService.upload({
-      userId,
-      file: req.file,
-    });
+      const video = await this.videoService.uploadVideo(userId, req.file);
 
-    this.logger.info('Video uploaded successfully', {
-      videoId: video.id,
-      userId,
-      filename: video.filename,
-    });
-
-    res.status(201).json({
-      message: 'Video uploaded successfully',
-      video: {
-        id: video.id,
+      this.logger.info('Upload video completed', {
+        videoId: video.id,
+        userId,
         filename: video.filename,
-        status: video.status,
-      },
-    });
-  };
+      });
 
-  /**
-   * This one is called by the worker when the video processing is done. Is not an endpoint.
-   */
-  handleProcessedVideo = async (payload: VideoProcessedPayload): Promise<void> => {
-    this.logger.info('Processing video completed', payload);
-
-    // Here you can implement any logic needed after the video is processed
-    // For example, updating the video status in the database or notifying the user
-    await this.storageService.updateStatus(payload.videoId, {
-      status: payload.status,
-      downloadKey: payload.downloadKey,
-    });
-
-    this.logger.info('Video status updated to processed', {
-      videoId: payload.videoId,
-    });
+      res.status(201).json({
+        message: 'Video uploaded successfully',
+        video: {
+          id: video.id,
+          filename: video.filename,
+          status: video.status,
+        },
+      });
+    } catch (error) {
+      this.logger.error('Upload video failed', {
+        userId,
+        filename,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({ message: 'Internal server error' });
+    }
   };
 
   download: RequestHandler = async (req: Request, res: Response): Promise<void> => {
     const userId = req.user?.sub;
     const videoId = req.params.id;
+    this.logger.info('Download video request', { userId, videoId });
 
-    if (!userId) {
-      res.status(401).json({ message: 'Unauthorized' });
-      return;
-    }
-
-    const { content } = await this.storageService.download({
-      userId,
-      videoId,
-    });
     try {
+      if (!userId) {
+        this.logger.warn('Unauthorized download attempt', { videoId });
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
+      }
+
+      const downloadData = await this.videoService.getVideoDownload(videoId, userId);
+
+      if (!downloadData) {
+        this.logger.warn('Video not found or not ready', { userId, videoId });
+        res.status(404).json({ message: 'Video not found or not ready for download' });
+        return;
+      }
+
+      this.logger.info('Download video completed', {
+        userId,
+        videoId,
+        filename: downloadData.filename,
+      });
+
       res.setHeader('Content-Type', 'application/zip');
-      res.setHeader('Content-Disposition', `attachment; filename="${videoId}.zip"`);
-      res.status(200).send(content);
-    } catch (err) {
-      console.error('Download failed:', err);
+      res.setHeader('Content-Disposition', `attachment; filename="${downloadData.filename}.zip"`);
+      res.status(200).send(downloadData.content);
+    } catch (error) {
+      this.logger.error('Download video failed', {
+        userId,
+        videoId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ message: 'Error downloading file' });
     }
   };

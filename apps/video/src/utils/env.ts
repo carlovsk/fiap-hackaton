@@ -13,6 +13,9 @@ export const env = z
     MINIO_SECRET_KEY: z.coerce.string(),
     MINIO_BUCKET: z.coerce.string(),
     AWS_REGION: z.coerce.string(),
+    DATABASE_URL: z.coerce.string(),
+    RABBITMQ_URL: z.coerce.string().default('amqp://rabbitmq:5672'),
+    VIDEO_EVENTS_EXCHANGE: z.coerce.string().default('VIDEO_EVENTS_QUEUE'),
     METRICS_PORT: z.coerce.number().default(8080),
   })
   .parse(process.env);

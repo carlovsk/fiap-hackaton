@@ -32,6 +32,8 @@ export class FileService {
     key: string;
     path: string;
   }): Promise<void> {
+    this.logger.info('Uploading file', { key, path, contentType });
+
     const stream = fs.createReadStream(path);
     const command = new PutObjectCommand({
       Bucket: env.MINIO_BUCKET,
@@ -41,13 +43,12 @@ export class FileService {
     });
 
     await this.s3Client.send(command);
+
+    this.logger.info('File upload completed', { key });
   }
 
   async downloadFile({ key, targetPath }: { key: string; targetPath: string }): Promise<void> {
-    this.logger.info('Downloading file from S3', {
-      key,
-      env,
-    });
+    this.logger.info('Downloading file', { key, targetPath });
 
     const command = new GetObjectCommand({
       Bucket: env.MINIO_BUCKET,
@@ -55,23 +56,34 @@ export class FileService {
     });
 
     const response = await this.s3Client.send(command);
-    this.logger.info('File downloaded successfully', { key, targetPath });
 
     if (!response.Body) {
-      throw new Error('Invalid S3 response stream');
+      this.logger.error('File not found in storage', { key });
+      throw new Error(`File not found: ${key}`);
     }
 
-    await this.ensureDirectoryExists(targetPath.substring(0, targetPath.lastIndexOf('/')));
+    await this.ensureDirectoryExists(path.dirname(targetPath));
 
-    await pipeline(response.Body as NodeJS.ReadableStream, fs.createWriteStream(targetPath));
+    const writeStream = fs.createWriteStream(targetPath);
+    await pipeline(response.Body as NodeJS.ReadableStream, writeStream);
+
+    this.logger.info('File download completed', { key, targetPath });
   }
 
   async zipDirectory(sourceDir: string, zipPath: string): Promise<void> {
+    this.logger.info('Compressing directory', { sourceDir, zipPath });
+
     return new Promise((resolve, reject) => {
       const output = fs.createWriteStream(zipPath);
       const archive = archiver('zip', { zlib: { level: 9 } });
 
-      output.on('close', resolve);
+      output.on('close', () => {
+        this.logger.info('Directory compression completed', {
+          zipPath,
+          size: archive.pointer(),
+        });
+        resolve();
+      });
       archive.on('error', reject);
 
       archive.pipe(output);
@@ -81,6 +93,8 @@ export class FileService {
   }
 
   async extractFrames(inputPath: string, outputDir: string): Promise<void> {
+    this.logger.info('Extracting frames from video', { inputPath, outputDir });
+
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
@@ -101,8 +115,13 @@ export class FileService {
       });
 
       ffmpeg.on('close', (code) => {
-        if (code === 0) resolve();
-        else reject(new Error(`ffmpeg exited with code ${code}`));
+        if (code === 0) {
+          this.logger.info('Frame extraction completed', { outputDir });
+          resolve();
+        } else {
+          this.logger.error('Frame extraction failed', { code, inputPath });
+          reject(new Error(`ffmpeg exited with code ${code}`));
+        }
       });
     });
   }

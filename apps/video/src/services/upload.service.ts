@@ -21,12 +21,10 @@ export class UploadService {
 
   async uploadFile({ key, file }: { file: Express.Multer.File; key: string }): Promise<void> {
     try {
-      this.logger.info('Uploading file to S3', {
+      this.logger.info('Uploading file', {
         key,
         fileName: file.originalname,
         size: file.size,
-        mimetype: file.mimetype,
-        env,
       });
 
       await this.s3Client.send(
@@ -38,19 +36,26 @@ export class UploadService {
         }),
       );
 
-      this.logger.info('File uploaded successfully', { key });
+      this.logger.info('File upload completed', { key });
     } catch (error) {
       if (error instanceof NoSuchBucket) {
+        this.logger.info('Bucket not found, creating', { bucket: env.MINIO_BUCKET });
         await this.createBucketIfNotExists();
         await this.uploadFile({ key, file });
         return;
       }
 
+      this.logger.error('File upload failed', {
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
 
   async downloadFile(key: string): Promise<Buffer> {
+    this.logger.info('Downloading file', { key });
+
     const command = new GetObjectCommand({
       Bucket: env.MINIO_BUCKET,
       Key: key,
@@ -59,10 +64,14 @@ export class UploadService {
     const response = await this.s3Client.send(command);
 
     if (!response.Body) {
+      this.logger.error('File not found in storage', { key });
       throw new Error(`File not found: ${key}`);
     }
 
-    return await buffer(response.Body as NodeJS.ReadableStream);
+    const fileBuffer = await buffer(response.Body as NodeJS.ReadableStream);
+    this.logger.info('File download completed', { key, size: fileBuffer.length });
+
+    return fileBuffer;
   }
 
   private async createBucketIfNotExists(): Promise<void> {

@@ -4,6 +4,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { jwtConfig } from '../config/jwt';
 import { authenticate } from './index';
 
+vi.mock('../database/prisma.ts', () => ({
+  prisma: {
+    video: {
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+    },
+  },
+}));
 vi.mock('../config/jwt', () => ({
   jwtConfig: {
     accessSecret: faker.string.alpha(32),
