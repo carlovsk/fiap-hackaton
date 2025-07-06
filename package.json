@@ -16,7 +16,20 @@
     "format": "npm run format --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present"
+    "build": "npm run build --workspaces --if-present",
+    "infra:init": "cd infra/terraform && terraform init",
+    "infra:validate": "cd infra/terraform && terraform validate",
+    "infra:fmt": "cd infra/terraform && terraform fmt -recursive",
+    "infra:plan": "cd infra/terraform && terraform plan",
+    "infra:apply": "cd infra/terraform && terraform apply",
+    "infra:destroy": "cd infra/terraform && terraform destroy",
+    "infra:deploy": "cd infra/terraform && ./deploy.sh",
+    "infra:output": "cd infra/terraform && terraform output",
+    "infra:show": "cd infra/terraform && terraform show",
+    "docker:up": "cd infra/docker && docker-compose up -d",
+    "docker:down": "cd infra/docker && docker-compose down",
+    "docker:logs": "cd infra/docker && docker-compose logs -f",
+    "docker:clean": "cd infra/docker && docker-compose down -v --rmi all"
   },
   "dependencies": {
     "axios": "^1.9.0",
