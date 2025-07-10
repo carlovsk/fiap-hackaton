@@ -1,0 +1,174 @@
+# FIAP Hackaton - Development Environment
+# This docker-compose file sets up the complete development environment
+# including all services and their dependencies.
+
+services:
+  # Auth Service
+  auth-api:
+    build:
+      context: ../../apps/auth
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@auth-database:5432/usersdb
+      - PORT=3000
+      - JWT_ACCESS_SECRET=dev_access_secret_12345
+      - JWT_REFRESH_SECRET=dev_refresh_secret_12345
+      - JWT_ACCESS_EXPIRES_IN=15m
+      - JWT_REFRESH_EXPIRES_IN=7d
+    volumes:
+      - ../../apps/auth:/app
+      - /app/node_modules
+    command: ["npm", "run", "dev"]
+    depends_on:
+      - auth-database
+    networks:
+      - app-network
+
+  # Video API Service  
+  video-api:
+    build:
+      context: ../../apps/video
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+      - "8080:8080" # Prometheus metrics
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@video-database:5432/videosdb
+      - PORT=4000
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=videos
+      - JWT_ACCESS_SECRET=dev_access_secret_12345
+      - JWT_REFRESH_SECRET=dev_refresh_secret_12345
+      - AWS_REGION=us-east-1
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    volumes:
+      - ../../apps/video:/app
+      - /app/node_modules
+    command: ["npm", "run", "dev"]
+    depends_on:
+      - video-database
+      - minio
+      - rabbitmq
+    networks:
+      - app-network
+
+  # Worker Service
+  worker:
+    build:
+      context: ../../apps/worker
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@video-database:5432/videosdb
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=videos
+      - VIDEO_SERVICE_API=http://video-api:4000
+    networks:
+      - app-network
+    volumes:
+      - ../../apps/worker:/app
+      - /app/node_modules
+    command: ["npm", "run", "dev"]
+    depends_on:
+      - video-database
+      - minio
+      - rabbitmq
+
+  # Auth Database
+  auth-database:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: usersdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - auth_pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # Video Database  
+  video-database:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: videosdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - video_pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # MinIO (S3-compatible storage)
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    networks:
+      - app-network
+
+  # RabbitMQ (Message Queue)
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app-network
+
+  # pgAdmin (Database Administration)
+  pgadmin:
+    image: dpage/pgadmin4
+    ports:
+      - "8081:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - auth-database
+      - video-database
+    networks:
+      - app-network
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+# Volumes for persistent data
+volumes:
+  auth_pgdata:
+    driver: local
+  video_pgdata:
+    driver: local
+  minio_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+# Network for service communication
+networks:
+  app-network:
+    driver: bridge

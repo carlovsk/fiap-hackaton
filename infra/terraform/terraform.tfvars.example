@@ -1,0 +1,37 @@
+# Sample Terraform Variables File
+# Copy this file to terraform.tfvars and customize for your environment
+
+# Project Configuration
+project_name = "fiap-hackaton"
+environment  = "prod"
+aws_region   = "us-east-1"
+
+# Network Configuration
+vpc_cidr           = "10.0.0.0/16"
+availability_zones = ["us-east-1a", "us-east-1b"]
+
+# Database Configuration
+db_instance_class        = "db.t3.micro"
+db_allocated_storage     = 20
+db_max_allocated_storage = 100
+
+# ECS Configuration
+video_api_cpu          = 512
+video_api_memory       = 1024
+video_api_desired_count = 2
+
+worker_cpu          = 1024
+worker_memory       = 2048
+worker_desired_count = 1
+
+# Container Images (update with your ECR repository URIs)
+video_api_image = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/fiap-video-api:latest"
+worker_image    = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/fiap-worker:latest"
+
+# Security Configuration (set these via environment variables or GitHub secrets)
+# jwt_access_secret  = "your-jwt-access-secret"
+# jwt_refresh_secret = "your-jwt-refresh-secret"
+
+# Optional Domain Configuration
+# domain_name     = "api.yourdomain.com"
+# certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"

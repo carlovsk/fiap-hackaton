@@ -5,6 +5,10 @@
       "path": "."
     },
     {
+      "name": "infra",
+      "path": "infra"
+    },
+    {
       "name": "auth",
       "path": "apps/auth"
     },
