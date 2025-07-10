@@ -147,11 +147,21 @@ jobs:
     - name: Terraform Init
       run: |
         # Initialize with backend configuration
+        # Clean environment variables to remove any newlines or whitespace
+        CLEAN_BUCKET=$(echo "${TF_STATE_BUCKET}" | tr -d '\n\r' | xargs)
+        CLEAN_TABLE=$(echo "${TF_LOCK_TABLE}" | tr -d '\n\r' | xargs)
+        CLEAN_STAGE=$(echo "${STAGE}" | tr -d '\n\r' | xargs)
+        
+        echo "Debug: Bucket name: '$CLEAN_BUCKET'"
+        echo "Debug: Table name: '$CLEAN_TABLE'"
+        echo "Debug: Stage: '$CLEAN_STAGE'"
+        echo "Debug: State key: '$CLEAN_STAGE/terraform.tfstate'"
+        
         terraform init \
-          -backend-config="bucket=${TF_STATE_BUCKET}" \
-          -backend-config="key=${STAGE}/terraform.tfstate" \
-          -backend-config="region=${AWS_REGION}" \
-          -backend-config="dynamodb_table=${TF_LOCK_TABLE}" \
+          -backend-config="bucket=$CLEAN_BUCKET" \
+          -backend-config="key=$CLEAN_STAGE/terraform.tfstate" \
+          -backend-config="region=${{ env.AWS_REGION }}" \
+          -backend-config="dynamodb_table=$CLEAN_TABLE" \
           -backend-config="encrypt=true"
       env:
         TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
