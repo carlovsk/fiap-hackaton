@@ -6,6 +6,11 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 env:
   NODE_VERSION: '22'
   TF_VERSION: '1.12.2'
@@ -99,32 +104,50 @@ jobs:
     - name: Update Pull Request
       uses: actions/github-script@v7
       if: github.event_name == 'pull_request'
+      continue-on-error: true
       env:
         PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
-          #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
-          #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
-          #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+          try {
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
 
-          <details><summary>Show Plan</summary>
+            <details><summary>Show Plan</summary>
 
-          \`\`\`\n
-          ${process.env.PLAN}
-          \`\`\`
+            \`\`\`\n
+            ${process.env.PLAN}
+            \`\`\`
 
-          </details>
+            </details>
 
-          *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
 
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: output
-          })
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+          } catch (error) {
+            console.log('Error posting comment:', error.message);
+            core.warning('Unable to post PR comment due to permissions. Plan results are available in the workflow logs.');
+          }
+
+    - name: Create Workflow Summary
+      if: github.event_name == 'pull_request'
+      run: |
+        echo "### Terraform Plan Results 📋" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Format Check:** ${{ steps.fmt.outcome }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Initialization:** ${{ steps.init.outcome }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Validation:** ${{ steps.validate.outcome }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Plan:** ${{ steps.plan.outcome }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📝 Full plan details are available in the workflow logs above." >> $GITHUB_STEP_SUMMARY
 
     - name: Terraform Plan Status
       if: steps.plan.outcome == 'failure'
