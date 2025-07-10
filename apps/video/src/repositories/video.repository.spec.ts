@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
-import { VideoRepository } from './video.repository';
+import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import { prisma } from '../database/prisma';
+import { VideoRepository } from './video.repository';
 
 // Mock Prisma
 vi.mock('../database/prisma', () => ({

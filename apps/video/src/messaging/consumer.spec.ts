@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 import amqplib from 'amqplib';
-import { MessageConsumer } from './consumer';
+import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import { QueuePayloadSchema } from '../schemas/queue.schema';
+import { MessageConsumer } from './consumer';
 import { videoProcessedHandler } from './handlers/videoProcessed.handler';
 
 // Mock dependencies

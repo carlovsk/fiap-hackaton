@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 import amqplib from 'amqplib';
+import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import { MessagePublisher } from './publisher';
 
 // Mock dependencies
