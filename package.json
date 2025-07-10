@@ -35,7 +35,8 @@
     "infra:unlock": "cd infra/terraform && terraform force-unlock",
     "infra:deploy": "./infra/scripts/deploy.sh",
     "setup:branch-protection": "./.github/scripts/setup-branch-protection.sh",
-    "infra:cleanup": "./infra/scripts/cleanup.sh"
+    "infra:cleanup": "./infra/scripts/cleanup.sh",
+    "prepare": "husky install"
   },
   "dependencies": {
     "axios": "^1.9.0",
@@ -59,6 +60,7 @@
     "type-fest": "^4.34.1",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.28.0",
-    "vitest": "^1.6.1"
+    "vitest": "^1.6.1",
+    "husky": "^9.0.11"
   }
 }

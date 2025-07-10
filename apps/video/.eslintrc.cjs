@@ -24,5 +24,6 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     'no-console': 'warn',
   },
+  ignorePatterns: ['vitest.config.ts', '.eslintrc.cjs', '.prettierrc.cjs'],
   root: true, // This ensures ESLint doesn't look for config files in parent directories
 };
