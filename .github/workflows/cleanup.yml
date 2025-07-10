@@ -1,0 +1,101 @@
+name: Infrastructure Cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_destroy:
+        description: 'Type "destroy" to confirm infrastructure destruction'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  TF_VERSION: '1.12.2'
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  terraform-destroy:
+    name: Destroy Infrastructure
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+    if: github.event.inputs.confirm_destroy == 'destroy'
+    defaults:
+      run:
+        working-directory: ./infra/terraform
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Set Stage
+      run: |
+        if [[ "${{ github.ref_name }}" == "main" ]]; then
+          echo "STAGE=prod" >> $GITHUB_ENV
+        else
+          STAGE=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9-]/-/g' | tr '[:upper:]' '[:lower:]')
+          echo "STAGE=$STAGE" >> $GITHUB_ENV
+        fi
+
+    - name: Terraform Init
+      run: |
+        # Initialize with backend configuration
+        terraform init \
+          -backend-config="bucket=${TF_STATE_BUCKET}" \
+          -backend-config="key=${STAGE}/terraform.tfstate" \
+          -backend-config="region=${AWS_REGION}" \
+          -backend-config="dynamodb_table=${TF_LOCK_TABLE}" \
+          -backend-config="encrypt=true"
+      env:
+        TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+        TF_LOCK_TABLE: ${{ secrets.TF_LOCK_TABLE }}
+
+    - name: Terraform Destroy
+      run: |
+        terraform destroy -auto-approve \
+          -var="jwt_access_secret=${{ secrets.JWT_ACCESS_SECRET }}" \
+          -var="jwt_refresh_secret=${{ secrets.JWT_REFRESH_SECRET }}" \
+          -var="video_api_image=dummy" \
+          -var="worker_image=dummy" \
+          -var="aws_region=${{ env.AWS_REGION }}"
+
+  aws-cleanup:
+    name: AWS Resource Cleanup
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+    if: github.event.inputs.confirm_destroy == 'destroy'
+    needs: terraform-destroy
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Run cleanup script
+      run: ./infra/scripts/cleanup.sh
+
+    - name: Cleanup Summary
+      run: |
+        echo "### Infrastructure Cleanup Complete 🧹" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "All AWS resources have been destroyed and cleaned up." >> $GITHUB_STEP_SUMMARY
