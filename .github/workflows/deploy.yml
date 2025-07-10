@@ -1,10 +1,11 @@
-name: Deploy to Production
+name: Deploy Infrastructure
 
 on:
   workflow_run:
     workflows: ["CI Pipeline"]
     types:
       - completed
+  push:
     branches: [main]
 
 permissions:
@@ -21,7 +22,7 @@ jobs:
   build-and-push:
     name: Build & Push Images
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     outputs:
       video-image: ${{ steps.build-video.outputs.image }}
       worker-image: ${{ steps.build-worker.outputs.image }}
@@ -40,7 +41,21 @@ jobs:
 
     - name: Set environment variables
       run: |
-        echo "STAGE=${{ github.ref_name }}" >> $GITHUB_ENV
+        # Determine branch name based on trigger type
+        if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+          BRANCH_NAME="${{ github.event.workflow_run.head_branch }}"
+        else
+          BRANCH_NAME="${{ github.ref_name }}"
+        fi
+        
+        # Set stage based on branch name (trunk-based development)
+        if [[ "$BRANCH_NAME" == "main" ]]; then
+          echo "STAGE=prod" >> $GITHUB_ENV
+        else
+          # For feature branches, use a cleaned version of the branch name
+          CLEAN_BRANCH=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9-]/-/g' | tr '[:upper:]' '[:lower:]')
+          echo "STAGE=$CLEAN_BRANCH" >> $GITHUB_ENV
+        fi
         ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
         echo "ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
 
@@ -105,3 +120,27 @@ jobs:
         docker push "$LATEST_URI"
         
         echo "image=$URI" >> $GITHUB_OUTPUT
+
+  # Determine environment for terraform-deploy
+  determine-environment:
+    name: Determine Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+    steps:
+      - id: set-env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            BRANCH_NAME="${{ github.event.workflow_run.head_branch }}"
+          else
+            BRANCH_NAME="${{ github.ref_name }}"
+          fi
+          
+          # Trunk-based development: main = prod, feature branches = branch name
+          if [[ "$BRANCH_NAME" == "main" ]]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          else
+            # Clean branch name for environment (remove special chars, lowercase)
+            CLEAN_BRANCH=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9-]/-/g' | tr '[:upper:]' '[:lower:]')
+            echo "environment=$CLEAN_BRANCH" >> $GITHUB_OUTPUT
+          fi
