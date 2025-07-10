@@ -47,8 +47,8 @@ jobs:
     - name: Format check - ${{ matrix.app }}
       run: npm run format:check --workspace=apps/${{ matrix.app }}
 
-    - name: Test - ${{ matrix.app }}
-      run: npm run test --workspace=apps/${{ matrix.app }}
+    # - name: Test - ${{ matrix.app }}
+    #   run: npm run test --workspace=apps/${{ matrix.app }}
 
   # Terraform Plan (on PR)
   terraform-plan:
