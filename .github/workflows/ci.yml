@@ -95,13 +95,27 @@ jobs:
     - name: Terraform Plan
       id: plan
       run: |
+        # Set stage based on branch name (trunk-based development)
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          BRANCH_NAME="${{ github.head_ref }}"
+        else
+          BRANCH_NAME="${{ github.ref_name }}"
+        fi
+        
+        if [[ "$BRANCH_NAME" == "main" ]]; then
+          STAGE="prod"
+        else
+          # Clean branch name for ECR repository naming
+          STAGE=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9-]/-/g' | tr '[:upper:]' '[:lower:]')
+        fi
+        
         # Get AWS account ID for ECR repository URLs
         ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
         terraform plan -no-color -input=false \
           -var="jwt_access_secret=${{ secrets.JWT_ACCESS_SECRET }}" \
           -var="jwt_refresh_secret=${{ secrets.JWT_REFRESH_SECRET }}" \
-          -var="video_api_image=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/fiap-hackaton-main/video:latest" \
-          -var="worker_image=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/fiap-hackaton-main/worker:latest"
+          -var="video_api_image=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/fiap-hackaton-$STAGE/video:latest" \
+          -var="worker_image=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/fiap-hackaton-$STAGE/worker:latest"
       continue-on-error: true
 
     - name: Update Pull Request
