@@ -1,0 +1,149 @@
+name: Deploy Infrastructure
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  TF_VERSION: '1.12.2'
+  AWS_REGION: 'us-east-1'
+  PROJECT_NAME: 'fiap-hackaton'
+
+jobs:
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    defaults:
+      run:
+        working-directory: ./infra/terraform
+    outputs:
+      ecr_repo_uri: ${{ steps.terraform-output.outputs.ecr_repo_uri }}
+      video_api_image: ${{ steps.terraform-output.outputs.video_api_image }}
+      worker_image: ${{ steps.terraform-output.outputs.worker_image }}
+      ecs_cluster_name: ${{ steps.terraform-output.outputs.ecs_cluster_name }}
+      ecs_service_name: ${{ steps.terraform-output.outputs.ecs_service_name }}
+      task_definition_family: ${{ steps.terraform-output.outputs.task_definition_family }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Set Stage Environment
+      run: |
+        # Since we only deploy main branch, always use prod
+        echo "STAGE=prod" >> $GITHUB_ENV
+
+    - name: Terraform Init
+      run: |
+        # Initialize with backend configuration
+        # Clean environment variables to remove any newlines or whitespace
+        CLEAN_BUCKET=$(echo "${TF_STATE_BUCKET}" | tr -d '\n\r' | xargs)
+        CLEAN_TABLE=$(echo "${TF_LOCK_TABLE}" | tr -d '\n\r' | xargs)
+        CLEAN_STAGE="prod"
+        
+        echo "Debug: Bucket name: '$CLEAN_BUCKET'"
+        echo "Debug: Table name: '$CLEAN_TABLE'"
+        echo "Debug: Stage: '$CLEAN_STAGE'"
+        echo "Debug: State key: '$CLEAN_STAGE/terraform.tfstate'"
+        
+        terraform init \
+          -backend-config="bucket=$CLEAN_BUCKET" \
+          -backend-config="key=$CLEAN_STAGE/terraform.tfstate" \
+          -backend-config="region=${{ env.AWS_REGION }}" \
+          -backend-config="dynamodb_table=$CLEAN_TABLE" \
+          -backend-config="encrypt=true"
+      env:
+        TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+        TF_LOCK_TABLE: ${{ secrets.TF_LOCK_TABLE }}
+
+    - name: Terraform Plan
+      run: |
+        # Get AWS account ID for ECR repository URLs
+        ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        terraform plan -input=false \
+          -var="jwt_access_secret=${{ secrets.JWT_ACCESS_SECRET }}" \
+          -var="jwt_refresh_secret=${{ secrets.JWT_REFRESH_SECRET }}" \
+          -var="video_api_image=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.PROJECT_NAME }}-prod/video:latest" \
+          -var="worker_image=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.PROJECT_NAME }}-prod/worker:latest" \
+          -var="aws_region=${{ env.AWS_REGION }}"
+
+    - name: Terraform Apply
+      run: |
+        # Get AWS account ID for ECR repository URLs
+        ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        terraform apply -auto-approve -input=false \
+          -var="jwt_access_secret=${{ secrets.JWT_ACCESS_SECRET }}" \
+          -var="jwt_refresh_secret=${{ secrets.JWT_REFRESH_SECRET }}" \
+          -var="video_api_image=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.PROJECT_NAME }}-prod/video:latest" \
+          -var="worker_image=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.PROJECT_NAME }}-prod/worker:latest" \
+          -var="aws_region=${{ env.AWS_REGION }}"
+
+    - name: Get Terraform Outputs
+      id: terraform-output
+      run: |
+        # Capture ECR repository URI and other important outputs
+        ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        ECR_REPO_URI="$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.PROJECT_NAME }}-prod"
+        
+        echo "ecr_repo_uri=$ECR_REPO_URI" >> $GITHUB_OUTPUT
+        echo "video_api_image=$ECR_REPO_URI/video" >> $GITHUB_OUTPUT
+        echo "worker_image=$ECR_REPO_URI/worker" >> $GITHUB_OUTPUT
+        
+        # Try to get outputs from terraform if they exist
+        if terraform output ecs_cluster_name > /dev/null 2>&1; then
+          echo "ecs_cluster_name=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
+        fi
+        if terraform output ecs_service_name > /dev/null 2>&1; then
+          echo "ecs_service_name=$(terraform output -raw ecs_service_name)" >> $GITHUB_OUTPUT
+        fi
+        if terraform output task_definition_family > /dev/null 2>&1; then
+          echo "task_definition_family=$(terraform output -raw task_definition_family)" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Output Infrastructure Info
+      run: |
+        echo "### Infrastructure Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**ECR Repository URI:** ${{ steps.terraform-output.outputs.ecr_repo_uri }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Video API Image:** ${{ steps.terraform-output.outputs.video_api_image }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Worker Image:** ${{ steps.terraform-output.outputs.worker_image }}" >> $GITHUB_STEP_SUMMARY
+
+    - name: Trigger Service Deployment
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const { data: workflow } = await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'deploy-service.yml',
+            ref: 'main',
+            inputs: {
+              ecr_repo_uri: '${{ steps.terraform-output.outputs.ecr_repo_uri }}',
+              ecs_cluster_name: '${{ steps.terraform-output.outputs.ecs_cluster_name }}',
+              ecs_service_name: '${{ steps.terraform-output.outputs.ecs_service_name }}',
+              task_definition_family: '${{ steps.terraform-output.outputs.task_definition_family }}'
+            }
+          });
+          console.log('Triggered service deployment workflow');
