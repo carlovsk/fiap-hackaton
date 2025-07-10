@@ -107,8 +107,8 @@ jobs:
             
             # Determine emoji based on coverage percentage (using awk for comparison)
             EMOJI=$(awk -v cov="$COVERAGE" 'BEGIN {
-              if (cov >= 90) print "🟢"
-              else if (cov >= 80) print "🟡" 
+              if (cov >= 80) print "🟢"
+              else if (cov >= 50) print "🟡" 
               else print "🔴"
             }')
             
