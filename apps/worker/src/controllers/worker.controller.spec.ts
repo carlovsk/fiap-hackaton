@@ -22,7 +22,6 @@ describe('WorkerController', () => {
 
     controller = new WorkerController();
     mockVideoProcessingService = { processVideo: vi.fn() };
-    // @ts-ignore private property access
     controller['videoProcessingService'] = mockVideoProcessingService as any;
   });
 
