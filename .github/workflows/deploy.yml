@@ -144,3 +144,73 @@ jobs:
             CLEAN_BRANCH=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9-]/-/g' | tr '[:upper:]' '[:lower:]')
             echo "environment=$CLEAN_BRANCH" >> $GITHUB_OUTPUT
           fi
+
+  # Deploy infrastructure with Terraform
+  terraform-deploy:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    needs: [build-and-push, determine-environment]
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    environment: ${{ needs.determine-environment.outputs.environment }}
+    defaults:
+      run:
+        working-directory: ./infra/terraform
+    outputs:
+      video-api-url: ${{ steps.terraform-output.outputs.video-api-url }}
+      ecs-cluster: ${{ steps.terraform-output.outputs.ecs-cluster }}
+      s3-bucket: ${{ steps.terraform-output.outputs.s3-bucket }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Plan
+      run: |
+        terraform plan -input=false \
+          -var="jwt_access_secret=${{ secrets.JWT_ACCESS_SECRET }}" \
+          -var="jwt_refresh_secret=${{ secrets.JWT_REFRESH_SECRET }}" \
+          -var="video_api_image=${{ needs.build-and-push.outputs.video-image }}" \
+          -var="worker_image=${{ needs.build-and-push.outputs.worker-image }}" \
+          -var="aws_region=${{ env.AWS_REGION }}"
+
+    - name: Terraform Apply
+      run: |
+        terraform apply -auto-approve -input=false \
+          -var="jwt_access_secret=${{ secrets.JWT_ACCESS_SECRET }}" \
+          -var="jwt_refresh_secret=${{ secrets.JWT_REFRESH_SECRET }}" \
+          -var="video_api_image=${{ needs.build-and-push.outputs.video-image }}" \
+          -var="worker_image=${{ needs.build-and-push.outputs.worker-image }}" \
+          -var="aws_region=${{ env.AWS_REGION }}"
+
+    - name: Get Terraform Outputs
+      id: terraform-output
+      run: |
+        echo "video-api-url=$(terraform output -raw video_api_url)" >> $GITHUB_OUTPUT
+        echo "ecs-cluster=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
+        echo "s3-bucket=$(terraform output -raw videos_bucket_name)" >> $GITHUB_OUTPUT
+
+    - name: Output Infrastructure Info
+      run: |
+        echo "### Infrastructure Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Video API URL:** ${{ steps.terraform-output.outputs.video-api-url }}" >> $GITHUB_STEP_SUMMARY
+        echo "**ECS Cluster:** ${{ steps.terraform-output.outputs.ecs-cluster }}" >> $GITHUB_STEP_SUMMARY
+        echo "**S3 Bucket:** ${{ steps.terraform-output.outputs.s3-bucket }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Video API Image:** ${{ needs.build-and-push.outputs.video-image }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Worker Image:** ${{ needs.build-and-push.outputs.worker-image }}" >> $GITHUB_STEP_SUMMARY
