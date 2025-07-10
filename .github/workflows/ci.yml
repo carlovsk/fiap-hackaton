@@ -96,8 +96,8 @@ jobs:
 
     - name: Generate Coverage Summary
       run: |
-        # Generate timestamp in the specified format
-        TIMESTAMP=$(date '+%d/%m/%Y at %H:%M:%S')
+        # Generate timestamp in the specified format (UTC-3)
+        TIMESTAMP=$(TZ='America/Sao_Paulo' date '+%d/%m/%Y at %H:%M:%S')
         
         echo "## 🧪 Test Coverage Summary" > coverage-summary.md
         echo "" >> coverage-summary.md
@@ -276,9 +276,16 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           try {
-            // Generate timestamp in the specified format
+            // Generate timestamp in the specified format (UTC-3)
             const now = new Date();
-            const timestamp = now.toLocaleDateString('en-GB') + ' at ' + now.toLocaleTimeString('en-GB', { hour12: false });
+            const utcMinus3 = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+            const day = String(utcMinus3.getDate()).padStart(2, '0');
+            const month = String(utcMinus3.getMonth() + 1).padStart(2, '0');
+            const year = utcMinus3.getFullYear();
+            const hours = String(utcMinus3.getHours()).padStart(2, '0');
+            const minutes = String(utcMinus3.getMinutes()).padStart(2, '0');
+            const seconds = String(utcMinus3.getSeconds()).padStart(2, '0');
+            const timestamp = `${day}/${month}/${year} at ${hours}:${minutes}:${seconds}`;
             
             const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
             #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
