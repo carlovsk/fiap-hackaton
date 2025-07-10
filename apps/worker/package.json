@@ -11,7 +11,7 @@
     "lint:check": "eslint src/**/*.ts --max-warnings 0",
     "lint:fix": "eslint src/**/*.ts --fix",
     "lint": "eslint src/**/*.ts",
-    "test": "vitest --run --coverage --coverage.exclude=src/database/generated",
+    "test": "vitest --run --coverage",
     "test:watch": "vitest --watch",
     "typecheck": "tsc --noEmit"
   },

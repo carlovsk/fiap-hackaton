@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, vi, type MockedFunction } from 'vitest';
-import { FileService } from './upload.service';
-import fs from 'fs';
-import { pipeline } from 'stream/promises';
 import archiver from 'archiver';
 import { spawn } from 'child_process';
+import fs from 'fs';
+import { pipeline } from 'stream/promises';
+import { beforeEach, describe, expect, it, vi, type MockedFunction } from 'vitest';
+import { FileService } from './upload.service';
 
 vi.mock('../utils/env', () => ({
   env: {
@@ -50,11 +50,11 @@ describe('FileService', () => {
     const mockStream = { pipe: vi.fn() };
     fsMock.createReadStream = vi.fn().mockReturnValue(mockStream);
     await service.uploadFile({ key: 'k', contentType: 'application/zip', path: 'p' });
-    expect(PutObjectCommand).toHaveBeenCalledWith({ 
-      Bucket: 'bucket', 
-      Key: 'k', 
-      Body: mockStream, 
-      ContentType: 'application/zip' 
+    expect(PutObjectCommand).toHaveBeenCalledWith({
+      Bucket: 'bucket',
+      Key: 'k',
+      Body: mockStream,
+      ContentType: 'application/zip',
     });
     expect(mockSend).toHaveBeenCalled();
   });
@@ -74,27 +74,27 @@ describe('FileService', () => {
     const finalize = vi.fn();
     const pointer = vi.fn().mockReturnValue(0);
     const directory = vi.fn();
-    
-    archiverMock.mockReturnValue({ 
-      on: archiveOn, 
-      pipe, 
-      finalize, 
+
+    archiverMock.mockReturnValue({
+      on: archiveOn,
+      pipe,
+      finalize,
       pointer,
-      directory
+      directory,
     } as any);
-    
+
     const outputOn = vi.fn();
     const mockWriteStream = { on: outputOn };
     fsMock.createWriteStream = vi.fn().mockReturnValue(mockWriteStream);
-    
+
     const promise = service.zipDirectory('src', 'zip');
-    
+
     // Simulate the close event on the output stream
     const closeCallback = outputOn.mock.calls.find(([event]) => event === 'close')?.[1];
     if (closeCallback) {
       closeCallback();
     }
-    
+
     await expect(promise).resolves.toBeUndefined();
     expect(archiverMock).toHaveBeenCalledWith('zip', { zlib: { level: 9 } });
     expect(pipe).toHaveBeenCalledWith(mockWriteStream);

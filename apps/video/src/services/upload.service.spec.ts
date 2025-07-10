@@ -1,6 +1,6 @@
+import { CreateBucketCommand, GetObjectCommand, NoSuchBucket, PutObjectCommand } from '@aws-sdk/client-s3';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UploadService } from './upload.service';
-import { NoSuchBucket, PutObjectCommand, GetObjectCommand, CreateBucketCommand } from '@aws-sdk/client-s3';
 
 vi.mock('../utils/env', () => ({
   env: {
@@ -23,11 +23,11 @@ vi.mock('../utils/logger', () => ({
 const mockSend = vi.fn();
 
 vi.mock('@aws-sdk/client-s3', async (importOriginal) => {
-  const mod = await importOriginal() as any;
+  const mod = (await importOriginal()) as any;
   return {
     ...mod,
-    S3Client: vi.fn().mockImplementation(() => ({ 
-      send: mockSend 
+    S3Client: vi.fn().mockImplementation(() => ({
+      send: mockSend,
     })),
     PutObjectCommand: vi.fn(),
     GetObjectCommand: vi.fn(),

@@ -74,7 +74,14 @@ describe('StorageService', () => {
   });
 
   it('downloads file when ready', async () => {
-    const video = { id: 'vid', userId: 'u', filename: 'f.mp4', status: 'COMPLETED', downloadKey: 'k', createdAt: new Date() };
+    const video = {
+      id: 'vid',
+      userId: 'u',
+      filename: 'f.mp4',
+      status: 'COMPLETED',
+      downloadKey: 'k',
+      createdAt: new Date(),
+    };
     (prisma.video.findUnique as MockedFunction<any>).mockResolvedValue(video);
     uploadServiceMock.downloadFile.mockResolvedValue(Buffer.from('zip'));
 
@@ -96,14 +103,20 @@ describe('StorageService', () => {
   it('lists videos', async () => {
     (prisma.video.findMany as MockedFunction<any>).mockResolvedValue([{ id: 'a' }]);
     const result = await service.list('u');
-    expect(prisma.video.findMany).toHaveBeenCalledWith({ where: { userId: 'u' }, select: { id: true, filename: true, status: true, createdAt: true } });
+    expect(prisma.video.findMany).toHaveBeenCalledWith({
+      where: { userId: 'u' },
+      select: { id: true, filename: true, status: true, createdAt: true },
+    });
     expect(result).toEqual([{ id: 'a' }]);
   });
 
   it('updates status', async () => {
     (prisma.video.update as MockedFunction<any>).mockResolvedValue({ id: 'vid' });
     const result = await service.updateStatus('vid', { status: 'COMPLETED', downloadKey: 'k' });
-    expect(prisma.video.update).toHaveBeenCalledWith({ where: { id: 'vid' }, data: { status: 'COMPLETED', downloadKey: 'k' } });
+    expect(prisma.video.update).toHaveBeenCalledWith({
+      where: { id: 'vid' },
+      data: { status: 'COMPLETED', downloadKey: 'k' },
+    });
     expect(result).toEqual({ id: 'vid' });
   });
 });

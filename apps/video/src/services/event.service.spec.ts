@@ -27,7 +27,7 @@ describe('EventService', () => {
     vi.clearAllMocks();
     vi.resetAllMocks();
     vi.restoreAllMocks();
-    
+
     // Get the mocked function
     const amqplib = await import('amqplib');
     mockConnect = amqplib.default.connect;
