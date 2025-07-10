@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventService } from './event.service';
 
 vi.mock('../utils/logger', () => ({
@@ -9,17 +9,28 @@ vi.mock('../utils/logger', () => ({
   }),
 }));
 
-vi.mock('amqplib', () => ({
-  connect: vi.fn(),
-}));
-
-const amqplib = await import('amqplib');
+// Mock amqplib with proper default export
+vi.mock('amqplib', () => {
+  const mockConnect = vi.fn();
+  return {
+    default: {
+      connect: mockConnect,
+    },
+    connect: mockConnect,
+  };
+});
 
 describe('EventService', () => {
-  beforeEach(() => {
+  let mockConnect: any;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
     vi.resetAllMocks();
     vi.restoreAllMocks();
+    
+    // Get the mocked function
+    const amqplib = await import('amqplib');
+    mockConnect = amqplib.default.connect;
   });
 
   it('instantiates service and asserts exchange', async () => {
@@ -28,11 +39,11 @@ describe('EventService', () => {
       publish: vi.fn(),
     } as any;
     const mockConn = { createChannel: vi.fn().mockResolvedValue(mockChannel) } as any;
-    (amqplib.connect as any).mockResolvedValue(mockConn);
+    mockConnect.mockResolvedValue(mockConn);
 
     const service = await EventService.instantiate();
 
-    expect(amqplib.connect).toHaveBeenCalledWith('amqp://rabbitmq:5672');
+    expect(mockConnect).toHaveBeenCalledWith('amqp://rabbitmq:5672');
     expect(mockChannel.assertExchange).toHaveBeenCalledWith(EventService.QUEUE_NAME, 'fanout', { durable: true });
     expect(service).toBeInstanceOf(EventService);
   });

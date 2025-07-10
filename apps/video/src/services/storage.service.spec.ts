@@ -4,8 +4,22 @@ import { StorageService } from './storage.service';
 vi.mock('../utils/logger', () => ({
   logger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }));
-vi.mock('./upload.service');
-vi.mock('./event.service');
+
+vi.mock('./upload.service', () => ({
+  UploadService: vi.fn().mockImplementation(() => ({
+    uploadFile: vi.fn(),
+    downloadFile: vi.fn(),
+  })),
+}));
+
+vi.mock('./event.service', () => ({
+  EventService: {
+    instantiate: vi.fn().mockResolvedValue({
+      sendEvent: vi.fn(),
+    }),
+  },
+}));
+
 vi.mock('uuid', () => ({ v4: vi.fn() }));
 vi.mock('../database/prisma.ts', () => ({
   prisma: {
@@ -19,30 +33,20 @@ vi.mock('../database/prisma.ts', () => ({
 }));
 
 const { prisma } = await import('../database/prisma');
-const { UploadService } = await import('./upload.service');
 const { EventService } = await import('./event.service');
 const { v4: uuid } = await import('uuid');
 
-const uploadServiceMock = {
-  uploadFile: vi.fn(),
-  downloadFile: vi.fn(),
-};
-const eventServiceMock = { sendEvent: vi.fn() };
-(EventService.instantiate as MockedFunction<any>)?.mockResolvedValue(eventServiceMock);
-
-UploadService.mockImplementation(() => uploadServiceMock);
-
 describe('StorageService', () => {
   let service: StorageService;
+  let uploadServiceMock: any;
+  let eventServiceMock: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.resetAllMocks();
-    vi.restoreAllMocks();
     service = new StorageService();
-    // override mocks again after restore
+    uploadServiceMock = service.uploadService;
+    eventServiceMock = { sendEvent: vi.fn() };
     (EventService.instantiate as MockedFunction<any>).mockResolvedValue(eventServiceMock);
-    (UploadService as any).mockImplementation(() => uploadServiceMock);
   });
 
   it('buildFileKey sanitizes filename', () => {
@@ -76,6 +80,10 @@ describe('StorageService', () => {
 
     const result = await service.download({ userId: 'u', videoId: 'vid' });
 
+    expect(prisma.video.findUnique).toHaveBeenCalledWith({
+      where: { id: 'vid', userId: 'u' },
+      select: { id: true, filename: true, status: true, downloadKey: true, createdAt: true, userId: true },
+    });
     expect(uploadServiceMock.downloadFile).toHaveBeenCalledWith('k');
     expect(result).toEqual({ filename: 'f.mp4', content: Buffer.from('zip'), downloadKey: 'k' });
   });

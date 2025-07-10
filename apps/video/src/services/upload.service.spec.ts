@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi, type MockedFunction } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UploadService } from './upload.service';
 import { NoSuchBucket, PutObjectCommand, GetObjectCommand, CreateBucketCommand } from '@aws-sdk/client-s3';
 
@@ -19,11 +19,16 @@ vi.mock('../utils/logger', () => ({
   }),
 }));
 
-vi.mock('@aws-sdk/client-s3', async (orig) => {
-  const mod = await orig();
+// Create a mock send function
+const mockSend = vi.fn();
+
+vi.mock('@aws-sdk/client-s3', async (importOriginal) => {
+  const mod = await importOriginal() as any;
   return {
     ...mod,
-    S3Client: vi.fn().mockImplementation(() => ({ send: vi.fn() })),
+    S3Client: vi.fn().mockImplementation(() => ({ 
+      send: mockSend 
+    })),
     PutObjectCommand: vi.fn(),
     GetObjectCommand: vi.fn(),
     CreateBucketCommand: vi.fn(),
@@ -34,22 +39,16 @@ vi.mock('@aws-sdk/client-s3', async (orig) => {
 // mock buffer helper
 vi.mock('stream/consumers', () => ({ buffer: vi.fn() }));
 
-const { S3Client } = await import('@aws-sdk/client-s3');
+// Import mocked modules
 const { buffer } = await import('stream/consumers');
 
 describe('UploadService', () => {
   let service: UploadService;
-  let sendMock: MockedFunction<any>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.resetAllMocks();
-    vi.restoreAllMocks();
-
     service = new UploadService();
-    // @ts-ignore accessing private client
-    sendMock = (service.s3Client.send as any);
-    sendMock.mockResolvedValue(undefined);
+    mockSend.mockResolvedValue(undefined);
   });
 
   describe('uploadFile', () => {
@@ -62,31 +61,31 @@ describe('UploadService', () => {
         Body: file.buffer,
         ContentType: file.mimetype,
       });
-      expect(sendMock).toHaveBeenCalled();
+      expect(mockSend).toHaveBeenCalled();
     });
 
     it('creates bucket when missing', async () => {
       const file = { originalname: 'vid.mp4', buffer: Buffer.from('a'), mimetype: 'video/mp4', size: 1 } as any;
       const err = new (NoSuchBucket as any)();
-      sendMock.mockRejectedValueOnce(err);
+      mockSend.mockRejectedValueOnce(err).mockResolvedValueOnce({}).mockResolvedValueOnce({});
       await service.uploadFile({ key: 'k', file });
       expect(CreateBucketCommand).toHaveBeenCalledWith({ Bucket: 'bucket' });
-      expect(sendMock).toHaveBeenCalledTimes(2);
+      expect(mockSend).toHaveBeenCalledTimes(3); // First fails, then create bucket, then retry upload
     });
   });
 
   describe('downloadFile', () => {
     it('returns file buffer', async () => {
       const body = {} as any;
-      sendMock.mockResolvedValueOnce({ Body: body });
-      (buffer as MockedFunction<any>).mockResolvedValue(Buffer.from('zip'));
+      mockSend.mockResolvedValueOnce({ Body: body });
+      (buffer as any).mockResolvedValue(Buffer.from('zip'));
       const result = await service.downloadFile('k');
       expect(GetObjectCommand).toHaveBeenCalledWith({ Bucket: 'bucket', Key: 'k' });
       expect(result).toEqual(Buffer.from('zip'));
     });
 
     it('throws when file is missing', async () => {
-      sendMock.mockResolvedValueOnce({ Body: undefined });
+      mockSend.mockResolvedValueOnce({ Body: undefined });
       await expect(service.downloadFile('k')).rejects.toThrow('File not found: k');
     });
   });
