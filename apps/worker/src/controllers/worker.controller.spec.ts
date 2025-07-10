@@ -22,8 +22,7 @@ describe('WorkerController', () => {
 
     controller = new WorkerController();
     mockVideoProcessingService = { processVideo: vi.fn() };
-    // @ts-ignore private property access
-    controller['videoProcessingService'] = mockVideoProcessingService as any;
+    (controller as any).videoProcessingService = mockVideoProcessingService;
   });
 
   describe('handleEvent', () => {
@@ -68,6 +67,21 @@ describe('WorkerController', () => {
       mockVideoProcessingService.processVideo.mockRejectedValue(err);
 
       await expect(controller.handleEvent(event)).rejects.toThrow('process failed');
+      expect(mockVideoProcessingService.processVideo).toHaveBeenCalledWith(payload);
+    });
+
+    it('[error] should handle non-Error exceptions', async () => {
+      const payload = {
+        videoId: faker.string.uuid(),
+        userId: faker.string.uuid(),
+        filename: faker.system.fileName(),
+        key: faker.string.uuid(),
+      };
+      const event = { type: 'video.uploaded', payload } as any;
+      const nonErrorException = 'String error';
+      mockVideoProcessingService.processVideo.mockRejectedValue(nonErrorException);
+
+      await expect(controller.handleEvent(event)).rejects.toBe(nonErrorException);
       expect(mockVideoProcessingService.processVideo).toHaveBeenCalledWith(payload);
     });
   });

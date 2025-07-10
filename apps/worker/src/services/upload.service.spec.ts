@@ -116,4 +116,52 @@ describe('FileService', () => {
     }
     await expect(promise).resolves.toBeUndefined();
   });
+
+  it('throws error when download file body is missing', async () => {
+    mockSend.mockResolvedValueOnce({ Body: null });
+
+    await expect(service.downloadFile({ key: 'k', targetPath: 'file' })).rejects.toThrow('File not found: k');
+
+    expect(GetObjectCommand).toHaveBeenCalledWith({ Bucket: 'bucket', Key: 'k' });
+  });
+
+  it('creates directory when it does not exist', async () => {
+    fsMock.existsSync = vi.fn().mockReturnValue(false);
+    fsMock.mkdirSync = vi.fn();
+
+    // Access the private method through any cast
+    await (service as any).ensureDirectoryExists('/test/path');
+
+    expect(fsMock.existsSync).toHaveBeenCalledWith('/test/path');
+    expect(fsMock.mkdirSync).toHaveBeenCalledWith('/test/path', { recursive: true });
+  });
+
+  it('logs when directory already exists', async () => {
+    fsMock.existsSync = vi.fn().mockReturnValue(true);
+    fsMock.mkdirSync = vi.fn();
+
+    // Access the private method through any cast
+    await (service as any).ensureDirectoryExists('/existing/path');
+
+    expect(fsMock.existsSync).toHaveBeenCalledWith('/existing/path');
+    expect(fsMock.mkdirSync).not.toHaveBeenCalled();
+  });
+
+  it('handles ffmpeg extraction failure', async () => {
+    fsMock.existsSync = vi.fn().mockReturnValue(false);
+    fsMock.mkdirSync = vi.fn();
+    const on = vi.fn();
+    const stderrOn = vi.fn();
+    spawnMock.mockReturnValue({ on, stderr: { on: stderrOn } } as any);
+
+    const promise = service.extractFrames('video', 'dir');
+
+    // Simulate failure (non-zero exit code)
+    const closeCallback = on.mock.calls.find(([event]) => event === 'close')?.[1];
+    if (closeCallback) {
+      closeCallback(1); // Non-zero exit code
+    }
+
+    await expect(promise).rejects.toThrow('ffmpeg exited with code 1');
+  });
 });
