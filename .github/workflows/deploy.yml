@@ -5,8 +5,6 @@ on:
     workflows: ["CI Pipeline"]
     types:
       - completed
-    branches: [main]
-  pull_request:
   push:
     branches: [main]
 
@@ -46,8 +44,6 @@ jobs:
         # Determine branch name based on trigger type
         if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
           BRANCH_NAME="${{ github.event.workflow_run.head_branch }}"
-        elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          BRANCH_NAME="${{ github.head_ref }}"
         else
           BRANCH_NAME="${{ github.ref_name }}"
         fi
@@ -136,13 +132,11 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
             BRANCH_NAME="${{ github.event.workflow_run.head_branch }}"
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            BRANCH_NAME="${{ github.head_ref }}"
           else
             BRANCH_NAME="${{ github.ref_name }}"
           fi
           
-          # Trunk-based development: main = production, feature branches = branch name
+          # Trunk-based development: main = prod, feature branches = branch name
           if [[ "$BRANCH_NAME" == "main" ]]; then
             echo "environment=prod" >> $GITHUB_OUTPUT
           else
