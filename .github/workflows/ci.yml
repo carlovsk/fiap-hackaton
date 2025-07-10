@@ -39,7 +39,14 @@ jobs:
       run: npm ci
 
     - name: Generate Prisma Client - ${{ matrix.app }}
-      run: npm run prisma:generate --workspace=apps/${{ matrix.app }}
+      run: |
+        # Check if the app has a prisma:generate script in package.json
+        if grep -q '"prisma:generate"' apps/${{ matrix.app }}/package.json 2>/dev/null; then
+          echo "Running Prisma generate for ${{ matrix.app }}"
+          npm run prisma:generate --workspace=apps/${{ matrix.app }}
+        else
+          echo "Skipping Prisma generate for ${{ matrix.app }} (no Prisma setup found)"
+        fi
 
     - name: Type check - ${{ matrix.app }}
       run: npm run typecheck --workspace=apps/${{ matrix.app }}
