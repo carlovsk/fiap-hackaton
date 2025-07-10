@@ -1,0 +1,107 @@
+name: Deploy to Production
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PROJECT_NAME: 'fiap-hackaton'
+  TF_VERSION: '1.12.2'
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  # Build and push Docker images
+  build-and-push:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    outputs:
+      video-image: ${{ steps.build-video.outputs.image }}
+      worker-image: ${{ steps.build-worker.outputs.image }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Set environment variables
+      run: |
+        echo "STAGE=${{ github.ref_name }}" >> $GITHUB_ENV
+        ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        echo "ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
+
+    - name: Login to ECR
+      run: |
+        aws ecr get-login-password \
+          --region ${{ env.AWS_REGION }} \
+        | docker login \
+          --username AWS \
+          --password-stdin ${{ env.ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+
+    - name: Create ECR repositories if missing
+      run: |
+        # Video API repository
+        VIDEO_REPO="${{ env.PROJECT_NAME }}-${{ env.STAGE }}/video"
+        if ! aws ecr describe-repositories --repository-names "$VIDEO_REPO" \
+             --region ${{ env.AWS_REGION }} > /dev/null 2>&1; then
+          aws ecr create-repository \
+            --repository-name "$VIDEO_REPO" \
+            --region ${{ env.AWS_REGION }}
+        fi
+        
+        # Worker repository
+        WORKER_REPO="${{ env.PROJECT_NAME }}-${{ env.STAGE }}/worker"
+        if ! aws ecr describe-repositories --repository-names "$WORKER_REPO" \
+             --region ${{ env.AWS_REGION }} > /dev/null 2>&1; then
+          aws ecr create-repository \
+            --repository-name "$WORKER_REPO" \
+            --region ${{ env.AWS_REGION }}
+        fi
+
+    - name: Build & Push Video API image
+      id: build-video
+      run: |
+        REPO="${{ env.PROJECT_NAME }}-${{ env.STAGE }}/video"
+        URI="${{ env.ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$REPO:${{ github.sha }}"
+        LATEST_URI="${{ env.ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$REPO:latest"
+        
+        docker build \
+          -t "$URI" \
+          -t "$LATEST_URI" \
+          -f apps/video/Dockerfile \
+          apps/video
+        docker push "$URI"
+        docker push "$LATEST_URI"
+        
+        echo "image=$URI" >> $GITHUB_OUTPUT
+
+    - name: Build & Push Worker image
+      id: build-worker
+      run: |
+        REPO="${{ env.PROJECT_NAME }}-${{ env.STAGE }}/worker"
+        URI="${{ env.ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$REPO:${{ github.sha }}"
+        LATEST_URI="${{ env.ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$REPO:latest"
+        
+        docker build \
+          -t "$URI" \
+          -t "$LATEST_URI" \
+          -f apps/worker/Dockerfile \
+          apps/worker
+        docker push "$URI"
+        docker push "$LATEST_URI"
+        
+        echo "image=$URI" >> $GITHUB_OUTPUT
