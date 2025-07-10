@@ -31,6 +31,7 @@ describe('VideosController', () => {
       uploadVideo: vi.fn(),
       getVideoDownload: vi.fn(),
     };
+    // accessing private property for testing
     controller['videoService'] = mockVideoService as any;
     mockNext = vi.fn();
   });

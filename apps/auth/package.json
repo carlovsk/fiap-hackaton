@@ -12,7 +12,7 @@
     "format:check": "prettier --check src/**/*.ts",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "test": "vitest --run --coverage --coverage.exclude=src/database/generated",
+    "test": "vitest --run --coverage",
     "test:watch": "vitest --watch",
     "prisma:generate": "prisma generate"
   },
