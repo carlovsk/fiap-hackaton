@@ -29,7 +29,8 @@
     "docker:up": "cd infra/docker && docker-compose up -d",
     "docker:down": "cd infra/docker && docker-compose down",
     "docker:logs": "cd infra/docker && docker-compose logs -f",
-    "docker:clean": "cd infra/docker && docker-compose down -v --rmi all"
+    "docker:clean": "cd infra/docker && docker-compose down -v --rmi all",
+    "prepare": "husky install"
   },
   "dependencies": {
     "axios": "^1.9.0",
@@ -53,6 +54,7 @@
     "type-fest": "^4.34.1",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.28.0",
-    "vitest": "^1.6.1"
+    "vitest": "^1.6.1",
+    "husky": "^9.0.11"
   }
 }
