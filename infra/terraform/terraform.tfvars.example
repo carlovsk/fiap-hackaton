@@ -25,8 +25,8 @@ worker_memory       = 2048
 worker_desired_count = 1
 
 # Container Images (update with your ECR repository URIs)
-video_api_image = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/fiap-video-api:latest"
-worker_image    = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/fiap-worker:latest"
+video_api_image = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/fiap-hackaton-main/video:latest"
+worker_image    = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/fiap-hackaton-main/worker:latest"
 
 # Security Configuration (set these via environment variables or GitHub secrets)
 # jwt_access_secret  = "your-jwt-access-secret"

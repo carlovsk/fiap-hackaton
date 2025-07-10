@@ -1,7 +1,17 @@
 # Configure Terraform for AWS Lab environment
-# Using local state storage for simplicity in course work
+# Using S3 backend for state storage in CI/CD
 terraform {
   required_version = ">= 1.0"
+
+  # S3 backend for remote state storage
+  # This ensures state persistence across CI/CD runs
+  backend "s3" {
+    # These values will be set via terraform init -backend-config
+    # or environment variables in CI/CD
+    # bucket = "fiap-hackaton-terraform-state"
+    # key    = "prod/terraform.tfstate"
+    # region = "us-east-1"
+  }
 
   required_providers {
     aws = {

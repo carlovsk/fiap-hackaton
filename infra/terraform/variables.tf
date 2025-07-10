@@ -90,13 +90,13 @@ variable "worker_desired_count" {
 variable "video_api_image" {
   description = "Docker image for Video API"
   type        = string
-  default     = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/fiap-video-api:latest"
+  default     = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/fiap-hackaton-main/video:latest"
 }
 
 variable "worker_image" {
   description = "Docker image for Worker"
   type        = string
-  default     = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/fiap-worker:latest"
+  default     = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/fiap-hackaton-main/worker:latest"
 }
 
 # Security Configuration
