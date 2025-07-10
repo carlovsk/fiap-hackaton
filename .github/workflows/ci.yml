@@ -93,7 +93,18 @@ jobs:
 
     - name: Terraform Init
       id: init
-      run: terraform init
+      run: |
+        # Initialize with backend configuration
+        # Backend details are set via environment variables
+        terraform init \
+          -backend-config="bucket=${TF_STATE_BUCKET}" \
+          -backend-config="key=${GITHUB_REF_NAME}/terraform.tfstate" \
+          -backend-config="region=${AWS_REGION}" \
+          -backend-config="dynamodb_table=${TF_LOCK_TABLE}" \
+          -backend-config="encrypt=true"
+      env:
+        TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+        TF_LOCK_TABLE: ${{ secrets.TF_LOCK_TABLE }}
 
     - name: Terraform Validate
       id: validate
