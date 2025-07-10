@@ -5,6 +5,10 @@
       "path": "."
     },
     {
+      "name": "ci",
+      "path": ".github/workflows"
+    },
+    {
       "name": "infra",
       "path": "infra"
     },
