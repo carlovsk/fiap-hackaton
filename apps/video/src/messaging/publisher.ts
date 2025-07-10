@@ -42,12 +42,22 @@ export class MessagePublisher {
   }
 
   async disconnect(): Promise<void> {
-    if (this.channel) {
-      await this.channel.close();
+    try {
+      if (this.channel) {
+        await this.channel.close();
+      }
+    } catch (error) {
+      this.logger.warn('Error closing channel:', error);
     }
-    if (this.connection) {
-      await this.connection.close();
+
+    try {
+      if (this.connection) {
+        await this.connection.close();
+      }
+    } catch (error) {
+      this.logger.warn('Error closing connection:', error);
     }
+
     this.logger.info('Message publisher disconnected');
   }
 }
