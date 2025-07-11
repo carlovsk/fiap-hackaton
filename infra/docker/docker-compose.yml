@@ -1,9 +1,9 @@
-# FIAP Hackaton - Development Environment
+# FIAP Hackaton - Unified Development Environment
 # This docker-compose file sets up the complete development environment
-# including all services and their dependencies.
+# including all three APIs and their infrastructure dependencies.
 
 services:
-  # Auth Service
+  # Auth Service (Port 3000)
   auth-api:
     build:
       context: ../../apps/auth
@@ -11,7 +11,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@auth-database:5432/usersdb
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/usersdb
       - PORT=3000
       - JWT_ACCESS_SECRET=dev_access_secret_12345
       - JWT_REFRESH_SECRET=dev_refresh_secret_12345
@@ -22,20 +22,20 @@ services:
       - /app/node_modules
     command: ["npm", "run", "dev"]
     depends_on:
-      - auth-database
+      - postgres
     networks:
       - app-network
 
-  # Video API Service  
+  # Video API Service (Port 3001) 
   video-api:
     build:
       context: ../../apps/video
       dockerfile: Dockerfile
     ports:
-      - "4000:4000"
+      - "3001:4000"
       - "8080:8080" # Prometheus metrics
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@video-database:5432/videosdb
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/videosdb
       - PORT=4000
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=minioadmin
@@ -50,21 +50,21 @@ services:
       - /app/node_modules
     command: ["npm", "run", "dev"]
     depends_on:
-      - video-database
+      - postgres
       - minio
       - rabbitmq
     networks:
       - app-network
 
-  # Worker Service
-  worker:
+  # Worker Service (Port 3002)
+  worker-api:
     build:
       context: ../../apps/worker
       dockerfile: Dockerfile
     ports:
-      - "3001:3001"
+      - "3002:3001"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@video-database:5432/videosdb
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/videosdb
       - RABBITMQ_URL=amqp://rabbitmq:5672
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=minioadmin
@@ -78,12 +78,12 @@ services:
       - /app/node_modules
     command: ["npm", "run", "dev"]
     depends_on:
-      - video-database
+      - postgres
       - minio
       - rabbitmq
 
-  # Auth Database
-  auth-database:
+  # PostgreSQL Database (Unified for all services)
+  postgres:
     image: postgres:15
     environment:
       POSTGRES_DB: usersdb
@@ -92,21 +92,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - auth_pgdata:/var/lib/postgresql/data
-    networks:
-      - app-network
-
-  # Video Database  
-  video-database:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: videosdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5433:5432"
-    volumes:
-      - video_pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
       - app-network
 
@@ -148,24 +135,47 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
     depends_on:
-      - auth-database
-      - video-database
+      - postgres
     networks:
       - app-network
     volumes:
       - pgadmin_data:/var/lib/pgadmin
 
+  # Prometheus (Metrics Collection)
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - app-network
+    depends_on:
+      - video-api
+
+  # Grafana (Metrics Visualization)
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3003:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - app-network
+    volumes:
+      - grafana_data:/var/lib/grafana
+
 # Volumes for persistent data
 volumes:
-  auth_pgdata:
-    driver: local
-  video_pgdata:
+  postgres_data:
     driver: local
   minio_data:
     driver: local
   rabbitmq_data:
     driver: local
   pgadmin_data:
+    driver: local
+  grafana_data:
     driver: local
 
 # Network for service communication
