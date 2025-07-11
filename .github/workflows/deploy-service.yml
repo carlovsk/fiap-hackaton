@@ -44,8 +44,10 @@ jobs:
           echo "ecr_base_uri=$(jq -r '.ecr_base_uri' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
           echo "ecs_cluster_name=$(jq -r '.ecs_cluster_name' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
           echo "ecs_video_service_name=$(jq -r '.ecs_video_service_name' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+          echo "ecs_auth_service_name=$(jq -r '.ecs_auth_service_name' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
           echo "ecs_worker_service_name=$(jq -r '.ecs_worker_service_name' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
           echo "ecs_video_task_definition_arn=$(jq -r '.ecs_video_task_definition_arn' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+          echo "ecs_auth_task_definition_arn=$(jq -r '.ecs_auth_task_definition_arn' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
           echo "ecs_worker_task_definition_arn=$(jq -r '.ecs_worker_task_definition_arn' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
         else
           echo "ERROR: Infrastructure outputs not found!"
@@ -176,6 +178,132 @@ jobs:
         echo "### Video Service Deployment Complete ✅" >> $GITHUB_STEP_SUMMARY
         echo "**New Image:** ${{ steps.load-outputs.outputs.ecr_base_uri }}/video:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
         echo "**Service:** ${{ steps.load-outputs.outputs.ecs_video_service_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Cluster:** ${{ steps.load-outputs.outputs.ecs_cluster_name }}" >> $GITHUB_STEP_SUMMARY
+
+  deploy-auth:
+    name: Deploy Auth Service
+    runs-on: ubuntu-latest
+    needs: deploy-services
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Download Infrastructure Outputs
+      uses: actions/download-artifact@v4
+      with:
+        name: infrastructure-outputs
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        run-id: ${{ github.event.workflow_run.id }}
+
+    - name: Load Infrastructure Outputs
+      id: load-outputs
+      run: |
+        echo "ecr_base_uri=$(jq -r '.ecr_base_uri' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+        echo "ecs_cluster_name=$(jq -r '.ecs_cluster_name' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+        echo "ecs_auth_service_name=$(jq -r '.ecs_auth_service_name' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+        echo "ecs_auth_task_definition_arn=$(jq -r '.ecs_auth_task_definition_arn' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to ECR
+      run: |
+        aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login \
+          --username AWS \
+          --password-stdin ${{ steps.load-outputs.outputs.ecr_base_uri }}
+
+    - name: Create ECR repository if missing
+      run: |
+        REPO_NAME="${{ env.PROJECT_NAME }}-prod/auth"
+        if ! aws ecr describe-repositories --repository-names "$REPO_NAME" \
+             --region ${{ env.AWS_REGION }} > /dev/null 2>&1; then
+          aws ecr create-repository \
+            --repository-name "$REPO_NAME" \
+            --region ${{ env.AWS_REGION }}
+          echo "Created ECR repository: $REPO_NAME"
+        else
+          echo "ECR repository already exists: $REPO_NAME"
+        fi
+
+    - name: Build & Push auth image
+      id: build-push-auth
+      run: |
+        # Build image with commit SHA tag
+        IMAGE_URI="${{ steps.load-outputs.outputs.ecr_base_uri }}/auth:${{ github.sha }}"
+        LATEST_URI="${{ steps.load-outputs.outputs.ecr_base_uri }}/auth:latest"
+        
+        echo "Building image for auth service"
+        echo "Image URI: $IMAGE_URI"
+        echo "Latest URI: $LATEST_URI"
+        
+        docker build \
+          -t "$IMAGE_URI" \
+          -t "$LATEST_URI" \
+          -f apps/user/Dockerfile \
+          apps/user
+        
+        docker push "$IMAGE_URI"
+        docker push "$LATEST_URI"
+        
+        echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+        echo "### Auth Service Image Built 🚀" >> $GITHUB_STEP_SUMMARY
+        echo "**Image URI:** $IMAGE_URI" >> $GITHUB_STEP_SUMMARY
+
+    - name: Download current task definition
+      run: |
+        # Use the actual task definition ARN from Terraform
+        TASK_DEF_ARN="${{ steps.load-outputs.outputs.ecs_auth_task_definition_arn }}"
+        echo "Downloading task definition: $TASK_DEF_ARN"
+        
+        aws ecs describe-task-definition \
+          --task-definition "$TASK_DEF_ARN" \
+          --query 'taskDefinition' \
+          --output json > task-definition.json
+        
+        echo "Successfully downloaded task definition"
+        
+        # Show container info for debugging
+        echo "Container definitions:"
+        cat task-definition.json | jq '.containerDefinitions[] | {name: .name, image: .image}'
+
+    - name: Update task definition with new image  
+      id: update-task-def
+      run: |
+        # Get the current image URI we built
+        NEW_IMAGE="${{ steps.load-outputs.outputs.ecr_base_uri }}/auth:${{ github.sha }}"
+        
+        # Update the task definition with the new image
+        # We'll update the first container (assuming single container per task)
+        jq --arg newImage "$NEW_IMAGE" \
+           '.containerDefinitions[0].image = $newImage' \
+           task-definition.json > new-task-definition.json
+        
+        # Remove fields that shouldn't be in the registration
+        jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .placementConstraints, .compatibilities, .registeredAt, .registeredBy)' \
+           new-task-definition.json > final-task-definition.json
+        
+        echo "Updated task definition with image: $NEW_IMAGE"
+        echo "task-definition=final-task-definition.json" >> $GITHUB_OUTPUT
+
+    - name: Deploy to ECS
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.update-task-def.outputs.task-definition }}
+        service: ${{ steps.load-outputs.outputs.ecs_auth_service_name }}
+        cluster: ${{ steps.load-outputs.outputs.ecs_cluster_name }}
+        wait-for-service-stability: true
+
+    - name: Service deployment summary
+      run: |
+        echo "### Auth Service Deployment Complete ✅" >> $GITHUB_STEP_SUMMARY
+        echo "**New Image:** ${{ steps.load-outputs.outputs.ecr_base_uri }}/auth:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Service:** ${{ steps.load-outputs.outputs.ecs_auth_service_name }}" >> $GITHUB_STEP_SUMMARY
         echo "**Cluster:** ${{ steps.load-outputs.outputs.ecs_cluster_name }}" >> $GITHUB_STEP_SUMMARY
 
   deploy-worker:

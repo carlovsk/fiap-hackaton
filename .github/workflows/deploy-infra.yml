@@ -28,8 +28,10 @@ jobs:
       ecr_base_uri: ${{ steps.terraform-output.outputs.ecr_base_uri }}
       ecs_cluster_name: ${{ steps.terraform-output.outputs.ecs_cluster_name }}
       ecs_video_service_name: ${{ steps.terraform-output.outputs.ecs_video_service_name }}
+      ecs_auth_service_name: ${{ steps.terraform-output.outputs.ecs_auth_service_name }}
       ecs_worker_service_name: ${{ steps.terraform-output.outputs.ecs_worker_service_name }}
       ecs_video_task_definition_arn: ${{ steps.terraform-output.outputs.ecs_video_task_definition_arn }}
+      ecs_auth_task_definition_arn: ${{ steps.terraform-output.outputs.ecs_auth_task_definition_arn }}
       ecs_worker_task_definition_arn: ${{ steps.terraform-output.outputs.ecs_worker_task_definition_arn }}
     
     steps:
@@ -85,6 +87,7 @@ jobs:
           -var="jwt_access_secret=${{ secrets.JWT_ACCESS_SECRET }}" \
           -var="jwt_refresh_secret=${{ secrets.JWT_REFRESH_SECRET }}" \
           -var="video_api_image=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.PROJECT_NAME }}-prod/video:latest" \
+          -var="auth_api_image=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.PROJECT_NAME }}-prod/auth:latest" \
           -var="worker_image=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.PROJECT_NAME }}-prod/worker:latest" \
           -var="aws_region=${{ env.AWS_REGION }}"
 
@@ -96,6 +99,7 @@ jobs:
           -var="jwt_access_secret=${{ secrets.JWT_ACCESS_SECRET }}" \
           -var="jwt_refresh_secret=${{ secrets.JWT_REFRESH_SECRET }}" \
           -var="video_api_image=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.PROJECT_NAME }}-prod/video:latest" \
+          -var="auth_api_image=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.PROJECT_NAME }}-prod/auth:latest" \
           -var="worker_image=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.PROJECT_NAME }}-prod/worker:latest" \
           -var="aws_region=${{ env.AWS_REGION }}"
 
@@ -107,8 +111,10 @@ jobs:
         echo "ecr_base_uri=$(terraform output -raw ecr_base_uri)" >> $GITHUB_OUTPUT
         echo "ecs_cluster_name=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
         echo "ecs_video_service_name=$(terraform output -raw ecs_video_service_name)" >> $GITHUB_OUTPUT
+        echo "ecs_auth_service_name=$(terraform output -raw ecs_auth_service_name)" >> $GITHUB_OUTPUT
         echo "ecs_worker_service_name=$(terraform output -raw ecs_worker_service_name)" >> $GITHUB_OUTPUT
         echo "ecs_video_task_definition_arn=$(terraform output -raw ecs_video_task_definition_arn)" >> $GITHUB_OUTPUT
+        echo "ecs_auth_task_definition_arn=$(terraform output -raw ecs_auth_task_definition_arn)" >> $GITHUB_OUTPUT
         echo "ecs_worker_task_definition_arn=$(terraform output -raw ecs_worker_task_definition_arn)" >> $GITHUB_OUTPUT
 
     - name: Save Infrastructure Outputs
@@ -120,8 +126,10 @@ jobs:
           "ecr_base_uri": "${{ steps.terraform-output.outputs.ecr_base_uri }}",
           "ecs_cluster_name": "${{ steps.terraform-output.outputs.ecs_cluster_name }}",
           "ecs_video_service_name": "${{ steps.terraform-output.outputs.ecs_video_service_name }}",
+          "ecs_auth_service_name": "${{ steps.terraform-output.outputs.ecs_auth_service_name }}",
           "ecs_worker_service_name": "${{ steps.terraform-output.outputs.ecs_worker_service_name }}",
           "ecs_video_task_definition_arn": "${{ steps.terraform-output.outputs.ecs_video_task_definition_arn }}",
+          "ecs_auth_task_definition_arn": "${{ steps.terraform-output.outputs.ecs_auth_task_definition_arn }}",
           "ecs_worker_task_definition_arn": "${{ steps.terraform-output.outputs.ecs_worker_task_definition_arn }}"
         }
         EOF
@@ -147,4 +155,5 @@ jobs:
         echo "**ECR Base URI:** ${{ steps.terraform-output.outputs.ecr_base_uri }}" >> $GITHUB_STEP_SUMMARY
         echo "**ECS Cluster:** ${{ steps.terraform-output.outputs.ecs_cluster_name }}" >> $GITHUB_STEP_SUMMARY
         echo "**Video Service:** ${{ steps.terraform-output.outputs.ecs_video_service_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Auth Service:** ${{ steps.terraform-output.outputs.ecs_auth_service_name }}" >> $GITHUB_STEP_SUMMARY
         echo "**Worker Service:** ${{ steps.terraform-output.outputs.ecs_worker_service_name }}" >> $GITHUB_STEP_SUMMARY

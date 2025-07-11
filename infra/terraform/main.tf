@@ -68,6 +68,7 @@ module "ecs_cluster" {
 
   project_name = var.project_name
   environment  = var.environment
+  vpc_id       = module.network.vpc_id
 }
 
 # ECS Video API Service - Web API with load balancer
@@ -84,6 +85,9 @@ module "ecs_service_video" {
   execution_role_arn = local.lab_role_arn
   task_role_arn      = local.lab_role_arn
   log_group_name     = module.ecs_cluster.log_group_name
+
+  # Service discovery
+  service_discovery_namespace_name = module.ecs_cluster.service_discovery_namespace_name
 
   # Container configuration
   container_image = var.video_api_image
@@ -104,6 +108,41 @@ module "ecs_service_video" {
   certificate_arn = var.certificate_arn
 }
 
+# ECS Auth API Service - Authentication API using shared ALB
+module "ecs_service_auth" {
+  source = "./modules/ecs_service_auth"
+
+  project_name       = var.project_name
+  environment        = var.environment
+  aws_region         = data.aws_region.current.name
+  vpc_id             = module.network.vpc_id
+  public_subnet_ids  = module.network.public_subnet_ids
+  private_subnet_ids = module.network.private_subnet_ids
+  cluster_id         = module.ecs_cluster.cluster_id
+  execution_role_arn = local.lab_role_arn
+  task_role_arn      = local.lab_role_arn
+  log_group_name     = module.ecs_cluster.log_group_name
+
+  # Container configuration
+  container_image = var.auth_api_image
+  cpu             = var.auth_api_cpu
+  memory          = var.auth_api_memory
+  desired_count   = var.auth_api_desired_count
+
+  # Shared ALB from video service
+  alb_arn               = module.ecs_service_video.alb_arn
+  alb_listener_arn      = module.ecs_service_video.alb_listener_arn
+  alb_security_group_id = module.ecs_service_video.alb_security_group_id
+
+  # Service discovery
+  service_discovery_namespace_id = module.ecs_cluster.service_discovery_namespace_id
+
+  # Dependencies
+  database_url           = module.rds.database_url
+  jwt_access_secret_arn  = module.secrets_manager.secret_arns["jwt_access_secret"]
+  jwt_refresh_secret_arn = module.secrets_manager.secret_arns["jwt_refresh_secret"]
+}
+
 # ECS Worker Service - Background processing service
 module "ecs_service_worker" {
   source = "./modules/ecs_service_worker"
@@ -117,6 +156,9 @@ module "ecs_service_worker" {
   execution_role_arn = local.lab_role_arn
   task_role_arn      = local.lab_role_arn
   log_group_name     = module.ecs_cluster.log_group_name
+
+  # Service discovery
+  service_discovery_namespace_name = module.ecs_cluster.service_discovery_namespace_name
 
   # Container configuration
   container_image = var.worker_image

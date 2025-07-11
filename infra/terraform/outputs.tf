@@ -73,6 +73,11 @@ output "ecs_video_service_name" {
   value       = module.ecs_service_video.service_name
 }
 
+output "ecs_auth_service_name" {
+  description = "Name of the Auth API ECS service"
+  value       = module.ecs_service_auth.service_name
+}
+
 output "ecs_worker_service_name" {
   description = "Name of the Worker ECS service"
   value       = module.ecs_service_worker.service_name
@@ -81,6 +86,11 @@ output "ecs_worker_service_name" {
 output "ecs_video_task_definition_arn" {
   description = "ARN of the Video API task definition"
   value       = module.ecs_service_video.task_definition_arn
+}
+
+output "ecs_auth_task_definition_arn" {
+  description = "ARN of the Auth API task definition"
+  value       = module.ecs_service_auth.task_definition_arn
 }
 
 output "ecs_worker_task_definition_arn" {
@@ -92,6 +102,11 @@ output "ecs_worker_task_definition_arn" {
 output "ecr_video_repository_url" {
   description = "ECR repository URL for video service"
   value       = "https://${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/fiap-hackaton-${var.environment}/video"
+}
+
+output "ecr_auth_repository_url" {
+  description = "ECR repository URL for auth service"
+  value       = "https://${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/fiap-hackaton-${var.environment}/auth"
 }
 
 output "ecr_worker_repository_url" {

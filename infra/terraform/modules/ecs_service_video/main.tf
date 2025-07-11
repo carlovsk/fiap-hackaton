@@ -61,6 +61,15 @@ resource "aws_security_group" "ecs_tasks" {
     security_groups = [aws_security_group.alb.id]
   }
 
+  # Allow incoming connections from other ECS services
+  ingress {
+    description = "HTTP from ECS services"
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    self        = true
+  }
+
   egress {
     description = "All outbound"
     from_port   = 0
@@ -130,9 +139,37 @@ resource "aws_lb_listener" "http" {
   port              = "80"
   protocol          = "HTTP"
 
+  # Default action returns 404 for unmatched paths
   default_action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Service not found"
+      status_code  = "404"
+    }
+  }
+}
+
+# ALB Listener Rule for Video API
+resource "aws_lb_listener_rule" "video_api" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 200 # Lower priority than auth service
+
+  action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.video_api.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/*", "/videos/*", "/metrics"]
+    }
+  }
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-video-listener-rule"
+    Environment = var.environment
+    Project     = var.project_name
   }
 }
 
@@ -206,6 +243,10 @@ resource "aws_ecs_task_definition" "video_api" {
         {
           name  = "JWT_REFRESH_EXPIRES_IN"
           value = "7d"
+        },
+        {
+          name  = "AUTH_SERVICE_URL"
+          value = "http://auth.${var.service_discovery_namespace_name}:3001"
         }
       ]
 

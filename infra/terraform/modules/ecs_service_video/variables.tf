@@ -49,6 +49,12 @@ variable "log_group_name" {
   type        = string
 }
 
+variable "service_discovery_namespace_name" {
+  description = "Service discovery namespace name"
+  type        = string
+  default     = ""
+}
+
 variable "container_image" {
   description = "Container image for the video API"
   type        = string

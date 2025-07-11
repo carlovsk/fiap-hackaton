@@ -3,6 +3,9 @@ resource "random_id" "cluster_suffix" {
   byte_length = 4
 }
 
+# Data source for current AWS account info
+data "aws_caller_identity" "current" {}
+
 # Simplified ECS Cluster Configuration for AWS Lab Environment
 # This version uses existing AWS managed roles and policies
 
@@ -16,6 +19,19 @@ resource "aws_ecs_cluster" "main" {
 
   tags = {
     Name        = "${var.project_name}-${var.environment}"
+    Environment = var.environment
+    Project     = var.project_name
+  }
+}
+
+# Service Discovery Namespace for ECS Services
+resource "aws_service_discovery_private_dns_namespace" "main" {
+  name        = "${var.project_name}-${var.environment}.local"
+  description = "Service discovery namespace for ${var.project_name} services"
+  vpc         = var.vpc_id
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-namespace"
     Environment = var.environment
     Project     = var.project_name
   }
