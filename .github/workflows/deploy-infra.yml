@@ -101,6 +101,7 @@ jobs:
 
     - name: Get Terraform Outputs
       id: terraform-output
+      working-directory: infra/terraform
       run: |
         # Capture outputs from terraform
         echo "ecr_base_uri=$(terraform output -raw ecr_base_uri)" >> $GITHUB_OUTPUT
@@ -111,6 +112,7 @@ jobs:
         echo "ecs_worker_task_definition_arn=$(terraform output -raw ecs_worker_task_definition_arn)" >> $GITHUB_OUTPUT
 
     - name: Save Infrastructure Outputs
+      working-directory: infra/terraform
       run: |
         # Create outputs file for next workflow
         cat > infrastructure-outputs.json << EOF
@@ -126,12 +128,16 @@ jobs:
         
         echo "Infrastructure outputs saved:"
         cat infrastructure-outputs.json
+        
+        # Also show the current directory and file location for debugging
+        echo "Current directory: $(pwd)"
+        echo "File exists: $(ls -la infrastructure-outputs.json)"
 
     - name: Upload Infrastructure Outputs
       uses: actions/upload-artifact@v4
       with:
         name: infrastructure-outputs
-        path: infrastructure-outputs.json
+        path: infra/terraform/infrastructure-outputs.json
         retention-days: 1
 
     - name: Output Infrastructure Info
