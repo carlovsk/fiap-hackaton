@@ -1,32 +1,11 @@
 name: Deploy Services
 
 on:
-  workflow_dispatch:
-    inputs:
-      ecr_base_uri:
-        description: 'ECR Base URI (account.dkr.ecr.region.amazonaws.com/project-env)'
-        required: true
-        type: string
-      ecs_cluster_name:
-        description: 'ECS Cluster Name'
-        required: true
-        type: string
-      ecs_video_service_name:
-        description: 'ECS Video Service Name'
-        required: true
-        type: string
-      ecs_worker_service_name:
-        description: 'ECS Worker Service Name'
-        required: true
-        type: string
-      ecs_video_task_definition_arn:
-        description: 'Video Task Definition ARN'
-        required: true
-        type: string
-      ecs_worker_task_definition_arn:
-        description: 'Worker Task Definition ARN'
-        required: true
-        type: string
+  workflow_run:
+    workflows: ["Deploy Infrastructure"]
+    types:
+      - completed
+    branches: [main]
 
 permissions:
   contents: read
@@ -40,19 +19,62 @@ jobs:
   deploy-services:
     name: Deploy Services
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - service: video
-            ecs_service_name: "${{ inputs.ecs_video_service_name }}"
-            task_definition_arn: "${{ inputs.ecs_video_task_definition_arn }}"
-          - service: worker
-            ecs_service_name: "${{ inputs.ecs_worker_service_name }}"
-            task_definition_arn: "${{ inputs.ecs_worker_task_definition_arn }}"
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+
+    - name: Download Infrastructure Outputs
+      uses: actions/download-artifact@v4
+      with:
+        name: infrastructure-outputs
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        run-id: ${{ github.event.workflow_run.id }}
+
+    - name: Load Infrastructure Outputs
+      id: load-outputs
+      run: |
+        # Load outputs from artifact
+        if [[ -f infrastructure-outputs.json ]]; then
+          echo "Infrastructure outputs found:"
+          cat infrastructure-outputs.json
+          
+          # Parse JSON and set outputs
+          echo "ecr_base_uri=$(jq -r '.ecr_base_uri' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+          echo "ecs_cluster_name=$(jq -r '.ecs_cluster_name' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+          echo "ecs_video_service_name=$(jq -r '.ecs_video_service_name' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+          echo "ecs_worker_service_name=$(jq -r '.ecs_worker_service_name' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+          echo "ecs_video_task_definition_arn=$(jq -r '.ecs_video_task_definition_arn' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+          echo "ecs_worker_task_definition_arn=$(jq -r '.ecs_worker_task_definition_arn' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+        else
+          echo "ERROR: Infrastructure outputs not found!"
+          exit 1
+        fi
+
+  deploy-video:
+    name: Deploy Video Service
+    runs-on: ubuntu-latest
+    needs: deploy-services
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Download Infrastructure Outputs
+      uses: actions/download-artifact@v4
+      with:
+        name: infrastructure-outputs
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        run-id: ${{ github.event.workflow_run.id }}
+
+    - name: Load Infrastructure Outputs
+      id: load-outputs
+      run: |
+        echo "ecr_base_uri=$(jq -r '.ecr_base_uri' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+        echo "ecs_cluster_name=$(jq -r '.ecs_cluster_name' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+        echo "ecs_video_service_name=$(jq -r '.ecs_video_service_name' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+        echo "ecs_video_task_definition_arn=$(jq -r '.ecs_video_task_definition_arn' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -66,11 +88,11 @@ jobs:
       run: |
         aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login \
           --username AWS \
-          --password-stdin ${{ inputs.ecr_base_uri }}
+          --password-stdin ${{ steps.load-outputs.outputs.ecr_base_uri }}
 
     - name: Create ECR repository if missing
       run: |
-        REPO_NAME="${{ env.PROJECT_NAME }}-prod/${{ matrix.service }}"
+        REPO_NAME="${{ env.PROJECT_NAME }}-prod/video"
         if ! aws ecr describe-repositories --repository-names "$REPO_NAME" \
              --region ${{ env.AWS_REGION }} > /dev/null 2>&1; then
           aws ecr create-repository \
@@ -81,34 +103,34 @@ jobs:
           echo "ECR repository already exists: $REPO_NAME"
         fi
 
-    - name: Build & Push ${{ matrix.service }} image
-      id: build-push
+    - name: Build & Push video image
+      id: build-push-video
       run: |
         # Build image with commit SHA tag
-        IMAGE_URI="${{ inputs.ecr_base_uri }}/${{ matrix.service }}:${{ github.sha }}"
-        LATEST_URI="${{ inputs.ecr_base_uri }}/${{ matrix.service }}:latest"
+        IMAGE_URI="${{ steps.load-outputs.outputs.ecr_base_uri }}/video:${{ github.sha }}"
+        LATEST_URI="${{ steps.load-outputs.outputs.ecr_base_uri }}/video:latest"
         
-        echo "Building image for ${{ matrix.service }}"
+        echo "Building image for video service"
         echo "Image URI: $IMAGE_URI"
         echo "Latest URI: $LATEST_URI"
         
         docker build \
           -t "$IMAGE_URI" \
           -t "$LATEST_URI" \
-          -f apps/${{ matrix.service }}/Dockerfile \
-          apps/${{ matrix.service }}
+          -f apps/video/Dockerfile \
+          apps/video
         
         docker push "$IMAGE_URI"
         docker push "$LATEST_URI"
         
         echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
-        echo "### ${{ matrix.service }} Service Image Built 🚀" >> $GITHUB_STEP_SUMMARY
+        echo "### Video Service Image Built 🚀" >> $GITHUB_STEP_SUMMARY
         echo "**Image URI:** $IMAGE_URI" >> $GITHUB_STEP_SUMMARY
 
     - name: Download current task definition
       run: |
         # Use the actual task definition ARN from Terraform
-        TASK_DEF_ARN="${{ matrix.task_definition_arn }}"
+        TASK_DEF_ARN="${{ steps.load-outputs.outputs.ecs_video_task_definition_arn }}"
         echo "Downloading task definition: $TASK_DEF_ARN"
         
         aws ecs describe-task-definition \
@@ -126,7 +148,7 @@ jobs:
       id: update-task-def
       run: |
         # Get the current image URI we built
-        NEW_IMAGE="${{ inputs.ecr_base_uri }}/${{ matrix.service }}:${{ github.sha }}"
+        NEW_IMAGE="${{ steps.load-outputs.outputs.ecr_base_uri }}/video:${{ github.sha }}"
         
         # Update the task definition with the new image
         # We'll update the first container (assuming single container per task)
@@ -145,13 +167,139 @@ jobs:
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.update-task-def.outputs.task-definition }}
-        service: ${{ matrix.ecs_service_name }}
-        cluster: ${{ inputs.ecs_cluster_name }}
+        service: ${{ steps.load-outputs.outputs.ecs_video_service_name }}
+        cluster: ${{ steps.load-outputs.outputs.ecs_cluster_name }}
         wait-for-service-stability: true
 
     - name: Service deployment summary
       run: |
-        echo "### ${{ matrix.service }} Service Deployment Complete ✅" >> $GITHUB_STEP_SUMMARY
-        echo "**New Image:** ${{ inputs.ecr_base_uri }}/${{ matrix.service }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Service:** ${{ matrix.ecs_service_name }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Cluster:** ${{ inputs.ecs_cluster_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "### Video Service Deployment Complete ✅" >> $GITHUB_STEP_SUMMARY
+        echo "**New Image:** ${{ steps.load-outputs.outputs.ecr_base_uri }}/video:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Service:** ${{ steps.load-outputs.outputs.ecs_video_service_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Cluster:** ${{ steps.load-outputs.outputs.ecs_cluster_name }}" >> $GITHUB_STEP_SUMMARY
+
+  deploy-worker:
+    name: Deploy Worker Service
+    runs-on: ubuntu-latest
+    needs: deploy-services
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Download Infrastructure Outputs
+      uses: actions/download-artifact@v4
+      with:
+        name: infrastructure-outputs
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        run-id: ${{ github.event.workflow_run.id }}
+
+    - name: Load Infrastructure Outputs
+      id: load-outputs
+      run: |
+        echo "ecr_base_uri=$(jq -r '.ecr_base_uri' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+        echo "ecs_cluster_name=$(jq -r '.ecs_cluster_name' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+        echo "ecs_worker_service_name=$(jq -r '.ecs_worker_service_name' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+        echo "ecs_worker_task_definition_arn=$(jq -r '.ecs_worker_task_definition_arn' infrastructure-outputs.json)" >> $GITHUB_OUTPUT
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to ECR
+      run: |
+        aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login \
+          --username AWS \
+          --password-stdin ${{ steps.load-outputs.outputs.ecr_base_uri }}
+
+    - name: Create ECR repository if missing
+      run: |
+        REPO_NAME="${{ env.PROJECT_NAME }}-prod/worker"
+        if ! aws ecr describe-repositories --repository-names "$REPO_NAME" \
+             --region ${{ env.AWS_REGION }} > /dev/null 2>&1; then
+          aws ecr create-repository \
+            --repository-name "$REPO_NAME" \
+            --region ${{ env.AWS_REGION }}
+          echo "Created ECR repository: $REPO_NAME"
+        else
+          echo "ECR repository already exists: $REPO_NAME"
+        fi
+
+    - name: Build & Push worker image
+      id: build-push-worker
+      run: |
+        # Build image with commit SHA tag
+        IMAGE_URI="${{ steps.load-outputs.outputs.ecr_base_uri }}/worker:${{ github.sha }}"
+        LATEST_URI="${{ steps.load-outputs.outputs.ecr_base_uri }}/worker:latest"
+        
+        echo "Building image for worker service"
+        echo "Image URI: $IMAGE_URI"
+        echo "Latest URI: $LATEST_URI"
+        
+        docker build \
+          -t "$IMAGE_URI" \
+          -t "$LATEST_URI" \
+          -f apps/worker/Dockerfile \
+          apps/worker
+        
+        docker push "$IMAGE_URI"
+        docker push "$LATEST_URI"
+        
+        echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+        echo "### Worker Service Image Built 🚀" >> $GITHUB_STEP_SUMMARY
+        echo "**Image URI:** $IMAGE_URI" >> $GITHUB_STEP_SUMMARY
+
+    - name: Download current task definition
+      run: |
+        # Use the actual task definition ARN from Terraform
+        TASK_DEF_ARN="${{ steps.load-outputs.outputs.ecs_worker_task_definition_arn }}"
+        echo "Downloading task definition: $TASK_DEF_ARN"
+        
+        aws ecs describe-task-definition \
+          --task-definition "$TASK_DEF_ARN" \
+          --query 'taskDefinition' \
+          --output json > task-definition.json
+        
+        echo "Successfully downloaded task definition"
+        
+        # Show container info for debugging
+        echo "Container definitions:"
+        cat task-definition.json | jq '.containerDefinitions[] | {name: .name, image: .image}'
+
+    - name: Update task definition with new image  
+      id: update-task-def
+      run: |
+        # Get the current image URI we built
+        NEW_IMAGE="${{ steps.load-outputs.outputs.ecr_base_uri }}/worker:${{ github.sha }}"
+        
+        # Update the task definition with the new image
+        # We'll update the first container (assuming single container per task)
+        jq --arg newImage "$NEW_IMAGE" \
+           '.containerDefinitions[0].image = $newImage' \
+           task-definition.json > new-task-definition.json
+        
+        # Remove fields that shouldn't be in the registration
+        jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .placementConstraints, .compatibilities, .registeredAt, .registeredBy)' \
+           new-task-definition.json > final-task-definition.json
+        
+        echo "Updated task definition with image: $NEW_IMAGE"
+        echo "task-definition=final-task-definition.json" >> $GITHUB_OUTPUT
+
+    - name: Deploy to ECS
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.update-task-def.outputs.task-definition }}
+        service: ${{ steps.load-outputs.outputs.ecs_worker_service_name }}
+        cluster: ${{ steps.load-outputs.outputs.ecs_cluster_name }}
+        wait-for-service-stability: true
+
+    - name: Service deployment summary
+      run: |
+        echo "### Worker Service Deployment Complete ✅" >> $GITHUB_STEP_SUMMARY
+        echo "**New Image:** ${{ steps.load-outputs.outputs.ecr_base_uri }}/worker:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Service:** ${{ steps.load-outputs.outputs.ecs_worker_service_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Cluster:** ${{ steps.load-outputs.outputs.ecs_cluster_name }}" >> $GITHUB_STEP_SUMMARY

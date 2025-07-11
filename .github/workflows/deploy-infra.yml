@@ -110,6 +110,30 @@ jobs:
         echo "ecs_video_task_definition_arn=$(terraform output -raw ecs_video_task_definition_arn)" >> $GITHUB_OUTPUT
         echo "ecs_worker_task_definition_arn=$(terraform output -raw ecs_worker_task_definition_arn)" >> $GITHUB_OUTPUT
 
+    - name: Save Infrastructure Outputs
+      run: |
+        # Create outputs file for next workflow
+        cat > infrastructure-outputs.json << EOF
+        {
+          "ecr_base_uri": "${{ steps.terraform-output.outputs.ecr_base_uri }}",
+          "ecs_cluster_name": "${{ steps.terraform-output.outputs.ecs_cluster_name }}",
+          "ecs_video_service_name": "${{ steps.terraform-output.outputs.ecs_video_service_name }}",
+          "ecs_worker_service_name": "${{ steps.terraform-output.outputs.ecs_worker_service_name }}",
+          "ecs_video_task_definition_arn": "${{ steps.terraform-output.outputs.ecs_video_task_definition_arn }}",
+          "ecs_worker_task_definition_arn": "${{ steps.terraform-output.outputs.ecs_worker_task_definition_arn }}"
+        }
+        EOF
+        
+        echo "Infrastructure outputs saved:"
+        cat infrastructure-outputs.json
+
+    - name: Upload Infrastructure Outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: infrastructure-outputs
+        path: infrastructure-outputs.json
+        retention-days: 1
+
     - name: Output Infrastructure Info
       run: |
         echo "### Infrastructure Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
@@ -118,24 +142,3 @@ jobs:
         echo "**ECS Cluster:** ${{ steps.terraform-output.outputs.ecs_cluster_name }}" >> $GITHUB_STEP_SUMMARY
         echo "**Video Service:** ${{ steps.terraform-output.outputs.ecs_video_service_name }}" >> $GITHUB_STEP_SUMMARY
         echo "**Worker Service:** ${{ steps.terraform-output.outputs.ecs_worker_service_name }}" >> $GITHUB_STEP_SUMMARY
-
-    - name: Trigger Service Deployment
-      uses: actions/github-script@v7
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const { data: workflow } = await github.rest.actions.createWorkflowDispatch({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            workflow_id: 'deploy-service.yml',
-            ref: 'main',
-            inputs: {
-              ecr_base_uri: '${{ steps.terraform-output.outputs.ecr_base_uri }}',
-              ecs_cluster_name: '${{ steps.terraform-output.outputs.ecs_cluster_name }}',
-              ecs_video_service_name: '${{ steps.terraform-output.outputs.ecs_video_service_name }}',
-              ecs_worker_service_name: '${{ steps.terraform-output.outputs.ecs_worker_service_name }}',
-              ecs_video_task_definition_arn: '${{ steps.terraform-output.outputs.ecs_video_task_definition_arn }}',
-              ecs_worker_task_definition_arn: '${{ steps.terraform-output.outputs.ecs_worker_task_definition_arn }}'
-            }
-          });
-          console.log('Triggered service deployment workflow');

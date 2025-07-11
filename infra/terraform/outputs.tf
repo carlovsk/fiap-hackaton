@@ -67,6 +67,43 @@ output "ecs_cluster_name" {
   value       = module.ecs_cluster.cluster_name
 }
 
+# ECS Service Outputs
+output "ecs_video_service_name" {
+  description = "Name of the Video API ECS service"
+  value       = module.ecs_service_video.service_name
+}
+
+output "ecs_worker_service_name" {
+  description = "Name of the Worker ECS service"
+  value       = module.ecs_service_worker.service_name
+}
+
+output "ecs_video_task_definition_arn" {
+  description = "ARN of the Video API task definition"
+  value       = module.ecs_service_video.task_definition_arn
+}
+
+output "ecs_worker_task_definition_arn" {
+  description = "ARN of the Worker task definition"
+  value       = module.ecs_service_worker.task_definition_arn
+}
+
+# ECR Repository URIs
+output "ecr_video_repository_url" {
+  description = "ECR repository URL for video service"
+  value       = "https://${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/fiap-hackaton-${var.environment}/video"
+}
+
+output "ecr_worker_repository_url" {
+  description = "ECR repository URL for worker service"
+  value       = "https://${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/fiap-hackaton-${var.environment}/worker"
+}
+
+output "ecr_base_uri" {
+  description = "Base ECR URI for repositories"
+  value       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/fiap-hackaton-${var.environment}"
+}
+
 # Secrets Manager Output
 output "secrets_arns" {
   description = "ARNs of the secrets in AWS Secrets Manager"
