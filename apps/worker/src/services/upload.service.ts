@@ -2,8 +2,8 @@ import archiver from 'archiver';
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { createStorageAdapter } from '../adapters/storage.factory';
-import { StorageAdapter } from '../adapters/storage.interface';
+import { createStorageAdapter } from '../adapters/storage/factory';
+import { StorageAdapter } from '../adapters/storage/interface';
 import { logger } from '../utils/logger';
 
 export class FileService {

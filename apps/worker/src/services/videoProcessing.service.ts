@@ -1,7 +1,7 @@
 import os from 'os';
 import path from 'path';
-import { MessagingFactory } from '../messaging/factory';
-import { IMessagePublisher } from '../messaging/interfaces/messaging.interface';
+import { MessagingFactory } from '../adapters/messaging/factory';
+import { IMessagePublisher } from '../adapters/messaging/interface';
 import { VideoUploadedPayload } from '../schemas/queue.schema';
 import { logger } from '../utils/logger';
 import { FileService } from './upload.service';

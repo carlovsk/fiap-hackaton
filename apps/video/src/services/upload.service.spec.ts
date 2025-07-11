@@ -10,7 +10,7 @@ const mockStorageAdapter = {
   getBucketName: vi.fn().mockReturnValue('test-bucket'),
 };
 
-vi.mock('../adapters/storage.factory', () => ({
+vi.mock('../adapters/storage/factory', () => ({
   createStorageAdapter: vi.fn(() => mockStorageAdapter),
 }));
 

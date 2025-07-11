@@ -4,8 +4,7 @@
   "description": "Projeto desenvolvido no Hackaton do curso 9SOAT da FIAP.",
   "license": "ISC",
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/*"
   ],
   "scripts": {
     "type-check": "tsc --noEmit",

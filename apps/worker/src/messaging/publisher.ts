@@ -1,7 +1,7 @@
 import amqplib from 'amqplib';
+import { IMessagePublisher } from '../adapters/messaging/interface';
 import { env } from '../utils/env';
 import { logger } from '../utils/logger';
-import { IMessagePublisher } from './interfaces/messaging.interface';
 
 export class MessagePublisher implements IMessagePublisher {
   private channel: amqplib.Channel | null = null;

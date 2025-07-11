@@ -1,7 +1,7 @@
 import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
-import { env } from '../../utils/env';
-import { logger } from '../../utils/logger';
-import { IMessagePublisher, MessageEvent } from '../interfaces/messaging.interface';
+import { env } from '../../../utils/env';
+import { logger } from '../../../utils/logger';
+import { IMessagePublisher, MessageEvent } from '../interface';
 
 export class SQSMessagePublisher implements IMessagePublisher {
   private client: SQSClient | null = null;
@@ -34,13 +34,18 @@ export class SQSMessagePublisher implements IMessagePublisher {
       // Determine which queue to use based on event type
       let queueUrl: string;
 
-      if (eventType.startsWith('video.processed')) {
+      if (eventType.startsWith('video.uploaded')) {
+        if (!env.SQS_UPLOADS_QUEUE_URL) {
+          throw new Error('SQS_UPLOADS_QUEUE_URL not configured for upload events');
+        }
+        queueUrl = env.SQS_UPLOADS_QUEUE_URL;
+      } else if (eventType.startsWith('video.processed')) {
         if (!env.SQS_PROCESSED_QUEUE_URL) {
           throw new Error('SQS_PROCESSED_QUEUE_URL not configured for processed events');
         }
         queueUrl = env.SQS_PROCESSED_QUEUE_URL;
       } else {
-        throw new Error(`Unknown event type for worker: ${eventType}`);
+        throw new Error(`Unknown event type: ${eventType}`);
       }
 
       const command = new SendMessageCommand({

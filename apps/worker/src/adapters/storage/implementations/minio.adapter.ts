@@ -2,9 +2,9 @@ import { CreateBucketCommand, GetObjectCommand, NoSuchBucket, PutObjectCommand, 
 import fs from 'fs';
 import { buffer } from 'stream/consumers';
 import { pipeline } from 'stream/promises';
-import { env } from '../utils/env';
-import { logger } from '../utils/logger';
-import { StorageAdapter } from './storage.interface';
+import { env } from '../../../utils/env';
+import { logger } from '../../../utils/logger';
+import { StorageAdapter } from '../interface';
 
 export class MinIOAdapter implements StorageAdapter {
   private s3Client: S3Client;

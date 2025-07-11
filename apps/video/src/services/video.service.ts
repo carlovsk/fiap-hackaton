@@ -1,6 +1,6 @@
 import { v4 as uuid } from 'uuid';
-import { MessagingFactory } from '../messaging/factory';
-import { IMessagePublisher } from '../messaging/interfaces/messaging.interface';
+import { MessagingFactory } from '../adapters/messaging/factory';
+import { IMessagePublisher } from '../adapters/messaging/interface';
 import { CreateVideoData, VideoData, VideoRepository } from '../repositories/video.repository';
 import { VideoProcessedPayload } from '../schemas/queue.schema';
 import { logger } from '../utils/logger';
