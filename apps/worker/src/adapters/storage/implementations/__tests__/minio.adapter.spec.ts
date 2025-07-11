@@ -42,6 +42,15 @@ vi.mock('../../../../utils/env', () => ({
   },
 }));
 
+vi.mock('../../../../utils/logger', () => ({
+  logger: vi.fn(() => ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  })),
+}));
+
 describe('MinIOAdapter', () => {
   let adapter: MinIOAdapter;
   let mockSend: any;
