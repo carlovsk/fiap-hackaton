@@ -1,5 +1,5 @@
 import express from 'express';
-import { MessagingFactory } from './messaging/factory';
+import { MessagingFactory } from './adapters/messaging/factory';
 import { env } from './utils/env';
 import { logger } from './utils/logger';
 

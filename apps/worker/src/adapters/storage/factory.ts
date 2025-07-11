@@ -1,8 +1,8 @@
-import { env } from '../utils/env';
-import { logger } from '../utils/logger';
-import { MinIOAdapter } from './minio.adapter';
-import { S3Adapter } from './s3.adapter';
-import { StorageAdapter } from './storage.interface';
+import { env } from '../../utils/env';
+import { logger } from '../../utils/logger';
+import { MinIOAdapter } from './implementations/minio.adapter';
+import { S3Adapter } from './implementations/s3.adapter';
+import { StorageAdapter } from './interface';
 
 const log = logger('adapters:storage-factory');
 

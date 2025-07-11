@@ -1,9 +1,9 @@
 import { DeleteMessageCommand, ReceiveMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
-import { QueuePayloadSchema } from '../../schemas/queue.schema';
-import { env } from '../../utils/env';
-import { logger } from '../../utils/logger';
-import { videoUploadedHandler } from '../handlers/videoUploaded.handler';
-import { IMessageConsumer, MessageEvent } from '../interfaces/messaging.interface';
+import { videoUploadedHandler } from '../../../messaging/handlers/videoUploaded.handler';
+import { QueuePayloadSchema } from '../../../schemas/queue.schema';
+import { env } from '../../../utils/env';
+import { logger } from '../../../utils/logger';
+import { IMessageConsumer, MessageEvent } from '../interface';
 
 export class SQSMessageConsumer implements IMessageConsumer {
   private client: SQSClient | null = null;

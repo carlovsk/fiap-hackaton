@@ -1,6 +1,6 @@
 import { NoSuchBucket, S3Client } from '@aws-sdk/client-s3';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MinIOAdapter } from './minio.adapter';
+import { MinIOAdapter } from '../minio.adapter';
 
 // Mock AWS SDK
 vi.mock('@aws-sdk/client-s3', () => ({
@@ -32,7 +32,7 @@ vi.mock('fs', () => ({
   createWriteStream: vi.fn(() => 'mock-write-stream'),
 }));
 
-vi.mock('../utils/env', () => ({
+vi.mock('../../../../utils/env', () => ({
   env: {
     MINIO_ENDPOINT: 'localhost:9000',
     MINIO_ACCESS_KEY: 'minioadmin',
@@ -71,7 +71,7 @@ describe('MinIOAdapter', () => {
 
   describe('operations', () => {
     beforeEach(async () => {
-      vi.doMock('../utils/env', () => ({
+      vi.doMock('../../../../utils/env', () => ({
         env: {
           MINIO_ENDPOINT: 'localhost:9000',
           MINIO_ACCESS_KEY: 'minioadmin',
@@ -81,7 +81,7 @@ describe('MinIOAdapter', () => {
         },
       }));
 
-      const { MinIOAdapter } = await import('./minio.adapter');
+      const { MinIOAdapter } = await import('../minio.adapter');
       adapter = new MinIOAdapter();
     });
 

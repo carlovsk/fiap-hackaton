@@ -1,7 +1,7 @@
 import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
-import { env } from '../../utils/env';
-import { logger } from '../../utils/logger';
-import { IMessagePublisher, MessageEvent } from '../interfaces/messaging.interface';
+import { env } from '../../../utils/env';
+import { logger } from '../../../utils/logger';
+import { IMessagePublisher, MessageEvent } from '../interface';
 
 export class SQSMessagePublisher implements IMessagePublisher {
   private client: SQSClient | null = null;
