@@ -13,7 +13,10 @@
     "lint": "eslint src/**/*.ts",
     "test": "vitest --run --coverage",
     "test:watch": "vitest --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "prisma:generate": "prisma generate"
   },
   "eslintConfig": {
     "extends": "./.eslintrc.cjs"

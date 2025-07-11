@@ -6,7 +6,7 @@ dotenv.config();
 export const env = z
   .object({
     NODE_ENV: z.string().default('development'),
-    PORT: z.coerce.number(),
+    PORT: z.coerce.number().default(3002),
     JWT_ACCESS_SECRET: z.coerce.string(),
     JWT_REFRESH_SECRET: z.coerce.string(),
     JWT_ACCESS_EXPIRES_IN: z.coerce.string(),
@@ -19,6 +19,8 @@ export const env = z
     S3_BUCKET: z.coerce.string().optional(),
     // Storage adapter type
     STORAGE_ADAPTER: z.enum(['minio', 's3']).default('minio'),
+    // Database config
+    DATABASE_URL: z.coerce.string(),
     // RabbitMQ config (for local development)
     RABBITMQ_URL: z.string().default('amqp://admin:admin@rabbitmq:5672'),
     VIDEO_EVENTS_EXCHANGE: z.string().default('video-events'),
