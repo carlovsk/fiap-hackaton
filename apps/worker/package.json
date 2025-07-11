@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "echo 'no prisma generate in worker'"
   },
   "eslintConfig": {
     "extends": "./.eslintrc.cjs"
