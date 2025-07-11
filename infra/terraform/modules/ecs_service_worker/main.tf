@@ -98,7 +98,7 @@ resource "aws_ecs_task_definition" "worker" {
         },
         {
           name  = "AUTH_SERVICE_URL"
-          value = "http://auth.${var.service_discovery_namespace_name}:3001"
+          value = var.auth_service_url
         }
       ]
 

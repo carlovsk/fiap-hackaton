@@ -44,8 +44,8 @@ variable "log_group_name" {
   type        = string
 }
 
-variable "service_discovery_namespace_name" {
-  description = "Service discovery namespace name"
+variable "auth_service_url" {
+  description = "URL of the auth service"
   type        = string
   default     = ""
 }

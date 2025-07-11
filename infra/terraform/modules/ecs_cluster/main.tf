@@ -24,19 +24,6 @@ resource "aws_ecs_cluster" "main" {
   }
 }
 
-# Service Discovery Namespace for ECS Services
-resource "aws_service_discovery_private_dns_namespace" "main" {
-  name        = "${var.project_name}-${var.environment}.local"
-  description = "Service discovery namespace for ${var.project_name} services"
-  vpc         = var.vpc_id
-
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-namespace"
-    Environment = var.environment
-    Project     = var.project_name
-  }
-}
-
 resource "aws_ecs_cluster_capacity_providers" "main" {
   cluster_name = aws_ecs_cluster.main.name
 

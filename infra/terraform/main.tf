@@ -86,9 +86,6 @@ module "ecs_service_video" {
   task_role_arn      = local.lab_role_arn
   log_group_name     = module.ecs_cluster.log_group_name
 
-  # Service discovery
-  service_discovery_namespace_name = module.ecs_cluster.service_discovery_namespace_name
-
   # Container configuration
   container_image = var.video_api_image
   cpu             = var.video_api_cpu
@@ -96,7 +93,7 @@ module "ecs_service_video" {
   desired_count   = var.video_api_desired_count
 
   # Dependencies
-  database_url            = module.rds.database_url
+  database_url            = module.secrets_manager.secret_arns["database_url"]
   s3_bucket_name          = module.s3.videos_bucket_name
   sqs_queue_url           = module.sqs.uploads_queue_url # Deprecated - keeping for compatibility
   sqs_uploads_queue_url   = module.sqs.uploads_queue_url
@@ -134,11 +131,8 @@ module "ecs_service_auth" {
   alb_listener_arn      = module.ecs_service_video.alb_listener_arn
   alb_security_group_id = module.ecs_service_video.alb_security_group_id
 
-  # Service discovery
-  service_discovery_namespace_id = module.ecs_cluster.service_discovery_namespace_id
-
   # Dependencies
-  database_url           = module.rds.database_url
+  database_url           = module.secrets_manager.secret_arns["database_url"]
   jwt_access_secret_arn  = module.secrets_manager.secret_arns["jwt_access_secret"]
   jwt_refresh_secret_arn = module.secrets_manager.secret_arns["jwt_refresh_secret"]
 }
@@ -157,8 +151,8 @@ module "ecs_service_worker" {
   task_role_arn      = local.lab_role_arn
   log_group_name     = module.ecs_cluster.log_group_name
 
-  # Service discovery
-  service_discovery_namespace_name = module.ecs_cluster.service_discovery_namespace_name
+  # Auth service URL via ALB
+  auth_service_url = "http://${module.ecs_service_video.alb_dns_name}/auth"
 
   # Container configuration
   container_image = var.worker_image
@@ -167,7 +161,7 @@ module "ecs_service_worker" {
   desired_count   = var.worker_desired_count
 
   # Dependencies
-  database_url            = module.rds.database_url
+  database_url            = module.secrets_manager.secret_arns["database_url"]
   s3_bucket_name          = module.s3.videos_bucket_name
   sqs_queue_url           = module.sqs.uploads_queue_url # Deprecated - keeping for compatibility
   sqs_uploads_queue_url   = module.sqs.uploads_queue_url
