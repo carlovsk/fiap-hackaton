@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid';
-import { MessagePublisher } from '../messaging/publisher';
+import { MessagingFactory } from '../messaging/factory';
+import { IMessagePublisher } from '../messaging/interfaces/messaging.interface';
 import { CreateVideoData, VideoData, VideoRepository } from '../repositories/video.repository';
 import { VideoProcessedPayload } from '../schemas/queue.schema';
 import { logger } from '../utils/logger';
@@ -8,13 +9,13 @@ import { UploadService } from './upload.service';
 export class VideoService {
   private videoRepository: VideoRepository;
   private uploadService: UploadService;
-  private messagePublisher: MessagePublisher;
+  private messagePublisher: IMessagePublisher;
   private logger = logger('services:video');
 
-  constructor(videoRepository?: VideoRepository, uploadService?: UploadService, messagePublisher?: MessagePublisher) {
+  constructor(videoRepository?: VideoRepository, uploadService?: UploadService, messagePublisher?: IMessagePublisher) {
     this.videoRepository = videoRepository || new VideoRepository();
     this.uploadService = uploadService || new UploadService();
-    this.messagePublisher = messagePublisher || new MessagePublisher();
+    this.messagePublisher = messagePublisher || MessagingFactory.createPublisher();
   }
 
   async listVideos(userId: string): Promise<VideoData[]> {

@@ -52,20 +52,40 @@ resource "aws_ecs_task_definition" "worker" {
           value = var.environment
         },
         {
-          name  = "DATABASE_URL"
-          value = var.database_url
+          name  = "PORT"
+          value = "3000"
         },
         {
-          name  = "S3_BUCKET_NAME"
-          value = var.s3_bucket_name
+          name  = "STORAGE_ADAPTER"
+          value = "s3"
         },
         {
-          name  = "S3_REGION"
+          name  = "AWS_REGION"
           value = var.aws_region
         },
         {
-          name  = "SQS_QUEUE_URL"
-          value = var.sqs_queue_url
+          name  = "S3_BUCKET"
+          value = var.s3_bucket_name
+        },
+        {
+          name  = "MESSAGING_ADAPTER"
+          value = "sqs"
+        },
+        {
+          name  = "SQS_UPLOADS_QUEUE_URL"
+          value = var.sqs_uploads_queue_url
+        },
+        {
+          name  = "SQS_PROCESSED_QUEUE_URL"
+          value = var.sqs_processed_queue_url
+        },
+        {
+          name  = "JWT_ACCESS_EXPIRES_IN"
+          value = "15m"
+        },
+        {
+          name  = "JWT_REFRESH_EXPIRES_IN"
+          value = "7d"
         }
       ]
 

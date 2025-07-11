@@ -1,18 +1,19 @@
 import os from 'os';
 import path from 'path';
-import { MessagePublisher } from '../messaging/publisher';
+import { MessagingFactory } from '../messaging/factory';
+import { IMessagePublisher } from '../messaging/interfaces/messaging.interface';
 import { VideoUploadedPayload } from '../schemas/queue.schema';
 import { logger } from '../utils/logger';
 import { FileService } from './upload.service';
 
 export class VideoProcessingService {
   private fileService: FileService;
-  private messagePublisher: MessagePublisher;
+  private messagePublisher: IMessagePublisher;
   private logger = logger('services:videoProcessing');
 
-  constructor(fileService?: FileService, messagePublisher?: MessagePublisher) {
+  constructor(fileService?: FileService, messagePublisher?: IMessagePublisher) {
     this.fileService = fileService || new FileService();
-    this.messagePublisher = messagePublisher || new MessagePublisher();
+    this.messagePublisher = messagePublisher || MessagingFactory.createPublisher();
   }
 
   async processVideo(payload: VideoUploadedPayload): Promise<void> {

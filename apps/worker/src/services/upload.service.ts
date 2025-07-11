@@ -1,26 +1,17 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import archiver from 'archiver';
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { pipeline } from 'stream/promises';
-import { env } from '../utils/env';
+import { createStorageAdapter } from '../adapters/storage.factory';
+import { StorageAdapter } from '../adapters/storage.interface';
 import { logger } from '../utils/logger';
 
 export class FileService {
-  s3Client: S3Client;
-  logger = logger('services:storage');
+  private storageAdapter: StorageAdapter;
+  private logger = logger('services:file');
 
   constructor() {
-    this.s3Client = new S3Client({
-      endpoint: env.MINIO_ENDPOINT,
-      region: env.AWS_REGION,
-      credentials: {
-        accessKeyId: env.MINIO_ACCESS_KEY,
-        secretAccessKey: env.MINIO_SECRET_KEY,
-      },
-      forcePathStyle: true,
-    });
+    this.storageAdapter = createStorageAdapter();
   }
 
   async uploadFile({
@@ -32,42 +23,11 @@ export class FileService {
     key: string;
     path: string;
   }): Promise<void> {
-    this.logger.info('Uploading file', { key, path, contentType });
-
-    const stream = fs.createReadStream(path);
-    const command = new PutObjectCommand({
-      Bucket: env.MINIO_BUCKET,
-      Key: key,
-      Body: stream,
-      ContentType: contentType,
-    });
-
-    await this.s3Client.send(command);
-
-    this.logger.info('File upload completed', { key });
+    await this.storageAdapter.uploadFileFromPath({ key, path, contentType });
   }
 
   async downloadFile({ key, targetPath }: { key: string; targetPath: string }): Promise<void> {
-    this.logger.info('Downloading file', { key, targetPath });
-
-    const command = new GetObjectCommand({
-      Bucket: env.MINIO_BUCKET,
-      Key: key,
-    });
-
-    const response = await this.s3Client.send(command);
-
-    if (!response.Body) {
-      this.logger.error('File not found in storage', { key });
-      throw new Error(`File not found: ${key}`);
-    }
-
-    await this.ensureDirectoryExists(path.dirname(targetPath));
-
-    const writeStream = fs.createWriteStream(targetPath);
-    await pipeline(response.Body as NodeJS.ReadableStream, writeStream);
-
-    this.logger.info('File download completed', { key, targetPath });
+    await this.storageAdapter.downloadFileToPath({ key, targetPath });
   }
 
   async zipDirectory(sourceDir: string, zipPath: string): Promise<void> {
@@ -124,14 +84,5 @@ export class FileService {
         }
       });
     });
-  }
-
-  private async ensureDirectoryExists(dir: string): Promise<void> {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-      this.logger.info('Created directory', { dir });
-    } else {
-      this.logger.info('Directory already exists', { dir });
-    }
   }
 }

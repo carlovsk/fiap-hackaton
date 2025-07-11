@@ -3,8 +3,9 @@ import { QueuePayloadSchema } from '../schemas/queue.schema';
 import { env } from '../utils/env';
 import { logger } from '../utils/logger';
 import { videoProcessedHandler } from './handlers/videoProcessed.handler';
+import { IMessageConsumer } from './interfaces/messaging.interface';
 
-export class MessageConsumer {
+export class MessageConsumer implements IMessageConsumer {
   private channel: amqplib.Channel | null = null;
   private connection: amqplib.ChannelModel | null = null;
   private logger = logger('messaging:consumer');

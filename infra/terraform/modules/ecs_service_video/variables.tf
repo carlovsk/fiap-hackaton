@@ -83,7 +83,18 @@ variable "s3_bucket_name" {
 }
 
 variable "sqs_queue_url" {
-  description = "URL of the SQS queue"
+  description = "URL of the SQS uploads queue (deprecated - use sqs_uploads_queue_url)"
+  type        = string
+  default     = ""
+}
+
+variable "sqs_uploads_queue_url" {
+  description = "URL of the SQS uploads queue"
+  type        = string
+}
+
+variable "sqs_processed_queue_url" {
+  description = "URL of the SQS processed queue"
   type        = string
 }
 
