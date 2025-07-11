@@ -1,8 +1,21 @@
 import { faker } from '@faker-js/faker';
 import os from 'os';
 import path from 'path';
-import { beforeEach, describe, expect, it, vi, type MockedFunction } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VideoProcessingService } from './videoProcessing.service';
+
+// Mock the adapters
+const mockFileService = {
+  downloadFile: vi.fn(),
+  extractFrames: vi.fn(),
+  zipDirectory: vi.fn(),
+  uploadFile: vi.fn(),
+};
+
+const mockPublisher = {
+  connect: vi.fn(),
+  publish: vi.fn(),
+};
 
 vi.mock('../utils/logger', () => ({
   logger: () => ({
@@ -15,29 +28,12 @@ vi.mock('../utils/logger', () => ({
 
 describe('VideoProcessingService', () => {
   let service: VideoProcessingService;
-  let mockFileService: {
-    downloadFile: MockedFunction<any>;
-    extractFrames: MockedFunction<any>;
-    zipDirectory: MockedFunction<any>;
-    uploadFile: MockedFunction<any>;
-  };
-  let mockPublisher: { connect: MockedFunction<any>; publish: MockedFunction<any> };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.resetAllMocks();
-    vi.restoreAllMocks();
 
-    service = new VideoProcessingService();
-    mockFileService = {
-      downloadFile: vi.fn(),
-      extractFrames: vi.fn(),
-      zipDirectory: vi.fn(),
-      uploadFile: vi.fn(),
-    };
-    mockPublisher = { connect: vi.fn(), publish: vi.fn() };
-    service['fileService'] = mockFileService as any;
-    service['messagePublisher'] = mockPublisher as any;
+    // Create service with injected dependencies
+    service = new VideoProcessingService(mockFileService as any, mockPublisher as any);
   });
 
   describe('processVideo', () => {
