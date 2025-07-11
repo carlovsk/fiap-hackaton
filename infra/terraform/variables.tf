@@ -62,6 +62,18 @@ variable "video_api_memory" {
   default     = 1024
 }
 
+variable "auth_api_cpu" {
+  description = "CPU units for Auth API ECS task"
+  type        = number
+  default     = 256
+}
+
+variable "auth_api_memory" {
+  description = "Memory (MB) for Auth API ECS task"
+  type        = number
+  default     = 512
+}
+
 variable "worker_cpu" {
   description = "CPU units for Worker ECS task"
   type        = number
@@ -80,6 +92,12 @@ variable "video_api_desired_count" {
   default     = 2
 }
 
+variable "auth_api_desired_count" {
+  description = "Desired number of Auth API tasks"
+  type        = number
+  default     = 1
+}
+
 variable "worker_desired_count" {
   description = "Desired number of Worker tasks"
   type        = number
@@ -91,6 +109,12 @@ variable "video_api_image" {
   description = "Docker image for Video API"
   type        = string
   default     = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/fiap-hackaton-main/video:latest"
+}
+
+variable "auth_api_image" {
+  description = "Docker image for Auth API"
+  type        = string
+  default     = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/fiap-hackaton-main/auth:latest"
 }
 
 variable "worker_image" {
