@@ -1,5 +1,6 @@
 import { CreateBucketCommand, GetObjectCommand, NoSuchBucket, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import fs from 'fs';
+import path from 'path';
 import { buffer } from 'stream/consumers';
 import { pipeline } from 'stream/promises';
 import { env } from '../../../utils/env';
@@ -113,6 +114,14 @@ export class MinIOAdapter implements StorageAdapter {
 
   async downloadFileToPath({ key, targetPath }: { key: string; targetPath: string }): Promise<void> {
     this.logger.info('Downloading file from MinIO to path', { key, targetPath });
+
+    // Ensure the target directory exists
+    const targetDir = path.dirname(targetPath);
+
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+      this.logger.debug('Created target directory', { targetDir });
+    }
 
     const command = new GetObjectCommand({
       Bucket: this.getBucketName(),

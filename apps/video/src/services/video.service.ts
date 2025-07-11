@@ -103,7 +103,7 @@ export class VideoService {
 
     await this.videoRepository.updateById(payload.videoId, {
       status: payload.status,
-      downloadKey: payload.downloadKey,
+      downloadKey: payload.status === 'COMPLETED' ? payload.downloadKey : undefined,
     });
 
     this.logger.info('Video processing status updated', {

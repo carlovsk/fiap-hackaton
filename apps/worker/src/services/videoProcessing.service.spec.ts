@@ -83,7 +83,7 @@ describe('VideoProcessingService', () => {
       await expect(service.processVideo(payload)).rejects.toThrow('download failed');
 
       expect(mockPublisher.connect).toHaveBeenCalled();
-      expect(mockPublisher.publish).toHaveBeenCalledWith('video.processed', {
+      expect(mockPublisher.publish).toHaveBeenCalledWith('video.processing_failed', {
         videoId: payload.videoId,
         userId: payload.userId,
         status: 'FAILED',
@@ -104,7 +104,7 @@ describe('VideoProcessingService', () => {
       await expect(service.processVideo(payload)).rejects.toBe(nonErrorException);
 
       expect(mockPublisher.connect).toHaveBeenCalled();
-      expect(mockPublisher.publish).toHaveBeenCalledWith('video.processed', {
+      expect(mockPublisher.publish).toHaveBeenCalledWith('video.processing_failed', {
         videoId: payload.videoId,
         userId: payload.userId,
         status: 'FAILED',

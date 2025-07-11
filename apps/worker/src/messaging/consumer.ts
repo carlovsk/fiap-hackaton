@@ -61,6 +61,10 @@ export class MessageConsumer implements IMessageConsumer {
       case 'video.uploaded':
         await videoUploadedHandler(event.payload);
         break;
+      case 'video.processed':
+        break;
+      case 'video.processing_failed':
+        break;
       default:
         this.logger.warn(`Unhandled event type: ${event.type}`);
     }

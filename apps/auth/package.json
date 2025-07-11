@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "nodemon --watch src --ext ts --exec tsx src/server.ts",
+    "dev": "npm run db:migrate && nodemon --watch src --ext ts --exec tsx src/server.ts",
     "build": "tsc",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
@@ -14,7 +14,9 @@
     "clean": "rm -rf dist",
     "test": "vitest --run --coverage",
     "test:watch": "vitest --watch",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:push": "prisma db push"
   },
   "eslintConfig": {
     "extends": "./.eslintrc.cjs"

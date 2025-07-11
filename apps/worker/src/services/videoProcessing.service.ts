@@ -96,7 +96,9 @@ export class VideoProcessingService {
       // Ensure publisher is connected
       await this.messagePublisher.connect();
 
-      await this.messagePublisher.publish('video.processed', payload);
+      const event = payload.status === 'COMPLETED' ? 'video.processed' : 'video.processing_failed';
+
+      await this.messagePublisher.publish(event, payload);
 
       this.logger.info('Video processed event published', {
         videoId: payload.videoId,

@@ -1,18 +1,19 @@
 -- Database initialization script for FIAP Hackaton
 -- Creates necessary databases for all services
 
--- Create databases
-CREATE DATABASE IF NOT EXISTS usersdb;
-CREATE DATABASE IF NOT EXISTS videosdb;
+-- The usersdb database is automatically created by POSTGRES_DB
+-- Create videosdb database for video and worker services
 
--- Grant permissions (optional, as we're using the default postgres user)
+SELECT 'CREATE DATABASE videosdb OWNER postgres'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'videosdb')\gexec
+
+-- Grant permissions
 GRANT ALL PRIVILEGES ON DATABASE usersdb TO postgres;
 GRANT ALL PRIVILEGES ON DATABASE videosdb TO postgres;
 
--- Switch to usersdb for any additional setup if needed
+-- Ensure databases are ready
 \c usersdb;
--- Add any user-specific table setup here if needed
+SELECT version();
 
--- Switch to videosdb for any additional setup if needed  
 \c videosdb;
--- Add any video-specific table setup here if needed
+SELECT version();

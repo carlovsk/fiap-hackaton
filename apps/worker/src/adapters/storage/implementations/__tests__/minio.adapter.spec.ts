@@ -25,6 +25,7 @@ vi.mock('stream/promises', () => ({
 
 vi.mock('fs', () => ({
   default: {
+    existsSync: vi.fn(() => true),
     createReadStream: vi.fn(() => 'mock-stream'),
     createWriteStream: vi.fn(() => 'mock-write-stream'),
   },

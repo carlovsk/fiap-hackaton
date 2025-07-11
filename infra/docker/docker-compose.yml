@@ -11,7 +11,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/usersdb
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/usersdb?schema=public&sslmode=disable
       - PORT=3000
       - JWT_ACCESS_SECRET=dev_access_secret_12345
       - JWT_REFRESH_SECRET=dev_refresh_secret_12345
@@ -22,7 +22,8 @@ services:
       - /app/node_modules
     command: ["npm", "run", "dev"]
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -32,11 +33,11 @@ services:
       context: ../../apps/video
       dockerfile: Dockerfile
     ports:
-      - "3001:4000"
+      - "3001:3001"
       - "8080:8080" # Prometheus metrics
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/videosdb
-      - PORT=4000
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/videosdb?schema=public&sslmode=disable
+      - PORT=3001
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
@@ -44,15 +45,18 @@ services:
       - JWT_ACCESS_SECRET=dev_access_secret_12345
       - JWT_REFRESH_SECRET=dev_refresh_secret_12345
       - AWS_REGION=us-east-1
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
     volumes:
       - ../../apps/video:/app
       - /app/node_modules
     command: ["npm", "run", "dev"]
     depends_on:
-      - postgres
-      - minio
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -62,15 +66,21 @@ services:
       context: ../../apps/worker
       dockerfile: Dockerfile
     ports:
-      - "3002:3001"
+      - "3002:3002"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/videosdb
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/videosdb?schema=public&sslmode=disable
+      - PORT=3002
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_BUCKET=videos
-      - VIDEO_SERVICE_API=http://video-api:4000
+      - JWT_ACCESS_SECRET=dev_access_secret_12345
+      - JWT_REFRESH_SECRET=dev_refresh_secret_12345
+      - JWT_ACCESS_EXPIRES_IN=15m
+      - JWT_REFRESH_EXPIRES_IN=7d
+      - AWS_REGION=us-east-1
+      - VIDEO_SERVICE_API=http://video-api:3001
     networks:
       - app-network
     volumes:
@@ -78,9 +88,12 @@ services:
       - /app/node_modules
     command: ["npm", "run", "dev"]
     depends_on:
-      - postgres
-      - minio
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
   # PostgreSQL Database (Unified for all services)
   postgres:
@@ -89,6 +102,7 @@ services:
       POSTGRES_DB: usersdb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "--auth-host=md5 --auth-local=md5"
     ports:
       - "5432:5432"
     volumes:
@@ -96,6 +110,12 @@ services:
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # MinIO (S3-compatible storage)
   minio:
@@ -125,6 +145,11 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   # pgAdmin (Database Administration)
   pgadmin:
@@ -135,7 +160,8 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - app-network
     volumes:
