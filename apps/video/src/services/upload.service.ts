@@ -1,5 +1,5 @@
-import { createStorageAdapter } from '../adapters/storage.factory';
-import { StorageAdapter } from '../adapters/storage.interface';
+import { createStorageAdapter } from '../adapters/storage/factory';
+import { StorageAdapter } from '../adapters/storage/interface';
 
 export class UploadService {
   private storageAdapter: StorageAdapter;

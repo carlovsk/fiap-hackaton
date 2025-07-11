@@ -1,18 +1,18 @@
 import { DeleteMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
-import { SQSMessageConsumer } from './sqs.consumer';
+import { SQSMessageConsumer } from '../sqs.consumer';
 
 // Mock AWS SDK
 vi.mock('@aws-sdk/client-sqs');
-vi.mock('../../schemas/queue.schema', () => ({
+vi.mock('../../../../schemas/queue.schema', () => ({
   QueuePayloadSchema: {
     parse: vi.fn(),
   },
 }));
-vi.mock('../handlers/videoProcessed.handler', () => ({
+vi.mock('../../../../messaging/handlers/videoProcessed.handler', () => ({
   videoProcessedHandler: vi.fn(),
 }));
-vi.mock('../../utils/env', () => ({
+vi.mock('../../../../utils/env', () => ({
   env: {
     AWS_REGION: 'us-east-1',
     SQS_PROCESSED_QUEUE_URL: 'https://sqs.us-east-1.amazonaws.com/123456789/processed-queue',
@@ -106,7 +106,7 @@ describe('SQSMessageConsumer', () => {
       await consumer.connect();
 
       // Mock the schema validation
-      const { QueuePayloadSchema } = await import('../../schemas/queue.schema');
+      const { QueuePayloadSchema } = await import('../../../../schemas/queue.schema');
       (QueuePayloadSchema.parse as Mock).mockReturnValue({
         type: 'video.processed',
         payload: { videoId: 'test-id', status: 'completed' },
@@ -118,7 +118,7 @@ describe('SQSMessageConsumer', () => {
         .mockResolvedValueOnce({ Messages: [mockMessage] }) // ReceiveMessage
         .mockResolvedValueOnce({}); // DeleteMessage
 
-      const { videoProcessedHandler } = await import('../handlers/videoProcessed.handler');
+      const { videoProcessedHandler } = await import('../../../../messaging/handlers/videoProcessed.handler');
       (videoProcessedHandler as Mock).mockResolvedValue(undefined);
 
       // Call processMessage directly to test message processing
@@ -129,7 +129,7 @@ describe('SQSMessageConsumer', () => {
     });
 
     it('should handle message processing errors', async () => {
-      const { videoProcessedHandler } = await import('../handlers/videoProcessed.handler');
+      const { videoProcessedHandler } = await import('../../../../messaging/handlers/videoProcessed.handler');
       (videoProcessedHandler as Mock).mockRejectedValue(new Error('Handler failed'));
 
       // Message should not be deleted when processing fails
@@ -141,7 +141,7 @@ describe('SQSMessageConsumer', () => {
     });
 
     it('should handle schema validation errors', async () => {
-      const { QueuePayloadSchema } = await import('../../schemas/queue.schema');
+      const { QueuePayloadSchema } = await import('../../../../schemas/queue.schema');
       (QueuePayloadSchema.parse as Mock).mockImplementation(() => {
         throw new Error('Schema validation failed');
       });
@@ -167,7 +167,7 @@ describe('SQSMessageConsumer', () => {
         }),
       };
 
-      const { QueuePayloadSchema } = await import('../../schemas/queue.schema');
+      const { QueuePayloadSchema } = await import('../../../../schemas/queue.schema');
       (QueuePayloadSchema.parse as Mock).mockReturnValue({
         type: 'unknown.event',
         payload: { data: 'test' },

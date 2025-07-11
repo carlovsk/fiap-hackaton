@@ -1,10 +1,10 @@
-import { env } from '../utils/env';
-import { logger } from '../utils/logger';
-import { SQSMessageConsumer } from './adapters/sqs.consumer';
-import { SQSMessagePublisher } from './adapters/sqs.publisher';
-import { MessageConsumer } from './consumer';
-import { IMessageConsumer, IMessagePublisher } from './interfaces/messaging.interface';
-import { MessagePublisher } from './publisher';
+import { MessageConsumer } from '../../messaging/consumer';
+import { MessagePublisher } from '../../messaging/publisher';
+import { env } from '../../utils/env';
+import { logger } from '../../utils/logger';
+import { SQSMessageConsumer } from './implementations/sqs.consumer';
+import { SQSMessagePublisher } from './implementations/sqs.publisher';
+import { IMessageConsumer, IMessagePublisher } from './interface';
 
 const log = logger('messaging:factory');
 

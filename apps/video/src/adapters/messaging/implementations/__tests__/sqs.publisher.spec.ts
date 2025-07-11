@@ -1,17 +1,17 @@
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
-import { SQSMessagePublisher } from './sqs.publisher';
+import { SQSMessagePublisher } from '../sqs.publisher';
 
 // Mock AWS SDK
 vi.mock('@aws-sdk/client-sqs');
-vi.mock('../../utils/env', () => ({
+vi.mock('../../../../utils/env', () => ({
   env: {
     AWS_REGION: 'us-east-1',
     SQS_UPLOADS_QUEUE_URL: 'https://sqs.us-east-1.amazonaws.com/123456789/uploads-queue',
     SQS_PROCESSED_QUEUE_URL: 'https://sqs.us-east-1.amazonaws.com/123456789/processed-queue',
   },
 }));
-vi.mock('../../utils/logger', () => ({
+vi.mock('../../../../utils/logger', () => ({
   logger: vi.fn(() => ({
     info: vi.fn(),
     warn: vi.fn(),
