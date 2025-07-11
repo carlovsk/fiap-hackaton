@@ -33,6 +33,15 @@ resource "aws_security_group" "ecs_tasks" {
     security_groups = [var.alb_security_group_id]
   }
 
+  # Allow incoming connections from other ECS services
+  ingress {
+    description = "HTTP from ECS services"
+    from_port   = var.container_port
+    to_port     = var.container_port
+    protocol    = "tcp"
+    self        = true
+  }
+
   egress {
     description = "All outbound"
     from_port   = 0
@@ -80,6 +89,28 @@ resource "aws_lb_target_group" "auth" {
 
   lifecycle {
     create_before_destroy = true
+  }
+}
+
+# Service Discovery Service
+resource "aws_service_discovery_service" "auth" {
+  name = "auth"
+
+  dns_config {
+    namespace_id = var.service_discovery_namespace_id
+
+    dns_records {
+      ttl  = 10
+      type = "A"
+    }
+
+    routing_policy = "MULTIVALUE"
+  }
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-auth-discovery"
+    Environment = var.environment
+    Project     = var.project_name
   }
 }
 
@@ -204,6 +235,10 @@ resource "aws_ecs_service" "auth" {
     target_group_arn = aws_lb_target_group.auth.arn
     container_name   = "auth-api"
     container_port   = var.container_port
+  }
+
+  service_registries {
+    registry_arn = aws_service_discovery_service.auth.arn
   }
 
   depends_on = [aws_lb_target_group.auth]

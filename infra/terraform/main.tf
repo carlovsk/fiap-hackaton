@@ -68,6 +68,7 @@ module "ecs_cluster" {
 
   project_name = var.project_name
   environment  = var.environment
+  vpc_id       = module.network.vpc_id
 }
 
 # ECS Video API Service - Web API with load balancer
@@ -84,6 +85,9 @@ module "ecs_service_video" {
   execution_role_arn = local.lab_role_arn
   task_role_arn      = local.lab_role_arn
   log_group_name     = module.ecs_cluster.log_group_name
+
+  # Service discovery
+  service_discovery_namespace_name = module.ecs_cluster.service_discovery_namespace_name
 
   # Container configuration
   container_image = var.video_api_image
@@ -130,6 +134,9 @@ module "ecs_service_auth" {
   alb_listener_arn      = module.ecs_service_video.alb_listener_arn
   alb_security_group_id = module.ecs_service_video.alb_security_group_id
 
+  # Service discovery
+  service_discovery_namespace_id = module.ecs_cluster.service_discovery_namespace_id
+
   # Dependencies
   database_url           = module.rds.database_url
   jwt_access_secret_arn  = module.secrets_manager.secret_arns["jwt_access_secret"]
@@ -149,6 +156,9 @@ module "ecs_service_worker" {
   execution_role_arn = local.lab_role_arn
   task_role_arn      = local.lab_role_arn
   log_group_name     = module.ecs_cluster.log_group_name
+
+  # Service discovery
+  service_discovery_namespace_name = module.ecs_cluster.service_discovery_namespace_name
 
   # Container configuration
   container_image = var.worker_image

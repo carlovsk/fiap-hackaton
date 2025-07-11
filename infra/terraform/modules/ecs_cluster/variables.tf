@@ -9,6 +9,11 @@ variable "environment" {
   type        = string
 }
 
+variable "vpc_id" {
+  description = "VPC ID for service discovery namespace"
+  type        = string
+}
+
 # For restricted environments, you'll need to provide existing role ARNs
 variable "execution_role_arn" {
   description = "ARN of existing ECS task execution role"

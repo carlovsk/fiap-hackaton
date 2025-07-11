@@ -20,6 +20,15 @@ resource "aws_security_group" "ecs_tasks" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Allow outgoing connections to other ECS services
+  egress {
+    description = "HTTP to ECS services"
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    self        = true
+  }
+
   tags = {
     Name        = "${var.project_name}-${var.environment}-worker-sg"
     Environment = var.environment
@@ -86,6 +95,10 @@ resource "aws_ecs_task_definition" "worker" {
         {
           name  = "JWT_REFRESH_EXPIRES_IN"
           value = "7d"
+        },
+        {
+          name  = "AUTH_SERVICE_URL"
+          value = "http://auth.${var.service_discovery_namespace_name}:3001"
         }
       ]
 

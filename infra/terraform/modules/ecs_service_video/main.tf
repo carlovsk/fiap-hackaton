@@ -61,6 +61,15 @@ resource "aws_security_group" "ecs_tasks" {
     security_groups = [aws_security_group.alb.id]
   }
 
+  # Allow incoming connections from other ECS services
+  ingress {
+    description = "HTTP from ECS services"
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    self        = true
+  }
+
   egress {
     description = "All outbound"
     from_port   = 0
@@ -234,6 +243,10 @@ resource "aws_ecs_task_definition" "video_api" {
         {
           name  = "JWT_REFRESH_EXPIRES_IN"
           value = "7d"
+        },
+        {
+          name  = "AUTH_SERVICE_URL"
+          value = "http://auth.${var.service_discovery_namespace_name}:3001"
         }
       ]
 
