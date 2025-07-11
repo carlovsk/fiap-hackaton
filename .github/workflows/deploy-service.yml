@@ -245,8 +245,8 @@ jobs:
         docker build \
           -t "$IMAGE_URI" \
           -t "$LATEST_URI" \
-          -f apps/user/Dockerfile \
-          apps/user
+          -f apps/auth/Dockerfile \
+          apps/auth
         
         docker push "$IMAGE_URI"
         docker push "$LATEST_URI"
