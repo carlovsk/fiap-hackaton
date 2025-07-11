@@ -5,7 +5,7 @@ dotenv.config();
 
 export const env = z
   .object({
-    PORT: z.coerce.number(),
+    PORT: z.coerce.number().default(3000),
     JWT_ACCESS_SECRET: z.coerce.string(),
     JWT_REFRESH_SECRET: z.coerce.string(),
     JWT_ACCESS_EXPIRES_IN: z.coerce.string(),
