@@ -28,27 +28,25 @@ describe('VideoService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.resetAllMocks();
-    vi.restoreAllMocks();
 
-    service = new VideoService();
     mockRepository = {
       findByUserId: vi.fn(),
       create: vi.fn(),
       findById: vi.fn(),
       updateById: vi.fn(),
     };
+
     mockUploadService = {
       uploadFile: vi.fn(),
       downloadFile: vi.fn(),
     };
-    mockPublisher = { connect: vi.fn(), publish: vi.fn() };
-    // private property access for testing
-    service['videoRepository'] = mockRepository as any;
-    // private property access for testing
-    service['uploadService'] = mockUploadService as any;
-    // private property access for testing
-    service['messagePublisher'] = mockPublisher as any;
+
+    mockPublisher = {
+      connect: vi.fn(),
+      publish: vi.fn(),
+    };
+
+    service = new VideoService(mockRepository as any, mockUploadService as any, mockPublisher as any);
   });
 
   describe('listVideos', () => {
