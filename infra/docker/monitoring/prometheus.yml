@@ -1,0 +1,38 @@
+# Prometheus configuration for FIAP Hackaton
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # Video Service Metrics
+  - job_name: 'video-service'
+    static_configs:
+      - targets: ['video-api:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+
+  # Auth Service Metrics (if implemented)
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['auth-api:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+
+  # Worker Service Metrics (if implemented)
+  - job_name: 'worker-service'
+    static_configs:
+      - targets: ['worker-api:3001']
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+
+  # Infrastructure Metrics
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
