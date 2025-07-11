@@ -32,11 +32,11 @@ services:
       context: ../../apps/video
       dockerfile: Dockerfile
     ports:
-      - "3001:4000"
+      - "3001:3001"
       - "8080:8080" # Prometheus metrics
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/videosdb
-      - PORT=4000
+      - PORT=3001
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
@@ -44,7 +44,7 @@ services:
       - JWT_ACCESS_SECRET=dev_access_secret_12345
       - JWT_REFRESH_SECRET=dev_refresh_secret_12345
       - AWS_REGION=us-east-1
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
     volumes:
       - ../../apps/video:/app
       - /app/node_modules
@@ -62,10 +62,10 @@ services:
       context: ../../apps/worker
       dockerfile: Dockerfile
     ports:
-      - "3002:3001"
+      - "3002:3002"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/videosdb
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
