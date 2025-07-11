@@ -1,5 +1,5 @@
 # Random suffix for idempotent resource naming
-resource "random_id" "worker_suffix" {
+resource "random_id" "service_suffix" {
   byte_length = 4
 }
 
@@ -42,7 +42,7 @@ resource "aws_security_group" "ecs_tasks" {
 
 # ECS Task Definition (simplified - uses provided role ARNs)
 resource "aws_ecs_task_definition" "worker" {
-  family                   = "wrk-${random_id.worker_suffix.hex}"
+  family                   = "wrk-${random_id.service_suffix.hex}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.cpu
@@ -135,7 +135,7 @@ resource "aws_ecs_task_definition" "worker" {
 
 # ECS Service
 resource "aws_ecs_service" "worker" {
-  name            = "wrk-${random_id.worker_suffix.hex}"
+  name            = "wrk-${random_id.service_suffix.hex}"
   cluster         = var.cluster_id
   task_definition = aws_ecs_task_definition.worker.arn
   desired_count   = var.desired_count

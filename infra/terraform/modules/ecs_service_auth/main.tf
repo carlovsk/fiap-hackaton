@@ -117,7 +117,7 @@ resource "aws_lb_listener_rule" "auth" {
 
 # ECS Task Definition
 resource "aws_ecs_task_definition" "auth" {
-  family                   = "${var.project_name}-${var.environment}-auth"
+  family                   = "auth-${random_id.service_suffix.hex}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.cpu
@@ -197,7 +197,7 @@ resource "aws_ecs_task_definition" "auth" {
 
 # ECS Service
 resource "aws_ecs_service" "auth" {
-  name            = "${var.project_name}-${var.environment}-auth"
+  name            = "auth-${random_id.service_suffix.hex}"
   cluster         = var.cluster_id
   task_definition = aws_ecs_task_definition.auth.arn
   desired_count   = var.desired_count
