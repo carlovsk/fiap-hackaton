@@ -50,11 +50,6 @@ variable "log_group_name" {
   type        = string
 }
 
-variable "service_discovery_namespace_id" {
-  description = "Service discovery namespace ID"
-  type        = string
-}
-
 # Container Configuration
 variable "container_image" {
   description = "Docker image for the auth service"

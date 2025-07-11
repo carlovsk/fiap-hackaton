@@ -142,6 +142,7 @@ resource "aws_lb_listener" "http" {
   # Default action returns 404 for unmatched paths
   default_action {
     type = "fixed-response"
+    
     fixed_response {
       content_type = "text/plain"
       message_body = "Service not found"
@@ -246,7 +247,7 @@ resource "aws_ecs_task_definition" "video_api" {
         },
         {
           name  = "AUTH_SERVICE_URL"
-          value = "http://auth.${var.service_discovery_namespace_name}:3001"
+          value = "http://${aws_lb.main.dns_name}/auth"
         }
       ]
 
