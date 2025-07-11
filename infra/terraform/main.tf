@@ -92,11 +92,13 @@ module "ecs_service_video" {
   desired_count   = var.video_api_desired_count
 
   # Dependencies
-  database_url           = module.rds.database_url
-  s3_bucket_name         = module.s3.videos_bucket_name
-  sqs_queue_url          = module.sqs.uploads_queue_url
-  jwt_access_secret_arn  = module.secrets_manager.secret_arns["jwt_access_secret"]
-  jwt_refresh_secret_arn = module.secrets_manager.secret_arns["jwt_refresh_secret"]
+  database_url            = module.rds.database_url
+  s3_bucket_name          = module.s3.videos_bucket_name
+  sqs_queue_url           = module.sqs.uploads_queue_url # Deprecated - keeping for compatibility
+  sqs_uploads_queue_url   = module.sqs.uploads_queue_url
+  sqs_processed_queue_url = module.sqs.processed_queue_url
+  jwt_access_secret_arn   = module.secrets_manager.secret_arns["jwt_access_secret"]
+  jwt_refresh_secret_arn  = module.secrets_manager.secret_arns["jwt_refresh_secret"]
 
   # Optional SSL certificate
   certificate_arn = var.certificate_arn
@@ -123,9 +125,11 @@ module "ecs_service_worker" {
   desired_count   = var.worker_desired_count
 
   # Dependencies
-  database_url           = module.rds.database_url
-  s3_bucket_name         = module.s3.videos_bucket_name
-  sqs_queue_url          = module.sqs.uploads_queue_url
-  jwt_access_secret_arn  = module.secrets_manager.secret_arns["jwt_access_secret"]
-  jwt_refresh_secret_arn = module.secrets_manager.secret_arns["jwt_refresh_secret"]
+  database_url            = module.rds.database_url
+  s3_bucket_name          = module.s3.videos_bucket_name
+  sqs_queue_url           = module.sqs.uploads_queue_url # Deprecated - keeping for compatibility
+  sqs_uploads_queue_url   = module.sqs.uploads_queue_url
+  sqs_processed_queue_url = module.sqs.processed_queue_url
+  jwt_access_secret_arn   = module.secrets_manager.secret_arns["jwt_access_secret"]
+  jwt_refresh_secret_arn  = module.secrets_manager.secret_arns["jwt_refresh_secret"]
 }

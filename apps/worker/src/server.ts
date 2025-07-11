@@ -1,5 +1,5 @@
 import express from 'express';
-import { MessageConsumer } from './messaging/consumer';
+import { MessagingFactory } from './messaging/factory';
 import { env } from './utils/env';
 import { logger } from './utils/logger';
 
@@ -7,8 +7,8 @@ logger('server').info('Starting worker server...');
 
 const app = express();
 
-// Start messaging consumer
-const consumer = new MessageConsumer();
+// Start messaging consumer using factory
+const consumer = MessagingFactory.createConsumer();
 consumer
   .connect()
   .then(() => consumer.startListening())
