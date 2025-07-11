@@ -3,21 +3,29 @@ name: Deploy Services
 on:
   workflow_dispatch:
     inputs:
-      ecr_repo_uri:
-        description: 'ECR Repository URI'
+      ecr_base_uri:
+        description: 'ECR Base URI (account.dkr.ecr.region.amazonaws.com/project-env)'
         required: true
         type: string
       ecs_cluster_name:
         description: 'ECS Cluster Name'
-        required: false
+        required: true
         type: string
-      ecs_service_name:
-        description: 'ECS Service Name'
-        required: false
+      ecs_video_service_name:
+        description: 'ECS Video Service Name'
+        required: true
         type: string
-      task_definition_family:
-        description: 'Task Definition Family'
-        required: false
+      ecs_worker_service_name:
+        description: 'ECS Worker Service Name'
+        required: true
+        type: string
+      ecs_video_task_definition_arn:
+        description: 'Video Task Definition ARN'
+        required: true
+        type: string
+      ecs_worker_task_definition_arn:
+        description: 'Worker Task Definition ARN'
+        required: true
         type: string
 
 permissions:
@@ -34,7 +42,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [video, worker]
+        include:
+          - service: video
+            ecs_service_name: "${{ inputs.ecs_video_service_name }}"
+            task_definition_arn: "${{ inputs.ecs_video_task_definition_arn }}"
+          - service: worker
+            ecs_service_name: "${{ inputs.ecs_worker_service_name }}"
+            task_definition_arn: "${{ inputs.ecs_worker_task_definition_arn }}"
     
     steps:
     - name: Checkout
@@ -52,7 +66,7 @@ jobs:
       run: |
         aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login \
           --username AWS \
-          --password-stdin ${{ inputs.ecr_repo_uri }}
+          --password-stdin ${{ inputs.ecr_base_uri }}
 
     - name: Create ECR repository if missing
       run: |
@@ -71,8 +85,8 @@ jobs:
       id: build-push
       run: |
         # Build image with commit SHA tag
-        IMAGE_URI="${{ inputs.ecr_repo_uri }}/${{ matrix.service }}:${{ github.sha }}"
-        LATEST_URI="${{ inputs.ecr_repo_uri }}/${{ matrix.service }}:latest"
+        IMAGE_URI="${{ inputs.ecr_base_uri }}/${{ matrix.service }}:${{ github.sha }}"
+        LATEST_URI="${{ inputs.ecr_base_uri }}/${{ matrix.service }}:latest"
         
         echo "Building image for ${{ matrix.service }}"
         echo "Image URI: $IMAGE_URI"
@@ -92,75 +106,52 @@ jobs:
         echo "**Image URI:** $IMAGE_URI" >> $GITHUB_STEP_SUMMARY
 
     - name: Download current task definition
-      if: inputs.task_definition_family != ''
       run: |
-        # Download the current task definition
-        TASK_DEF_FAMILY="${{ inputs.task_definition_family }}-${{ matrix.service }}"
-        echo "Downloading task definition: $TASK_DEF_FAMILY"
+        # Use the actual task definition ARN from Terraform
+        TASK_DEF_ARN="${{ matrix.task_definition_arn }}"
+        echo "Downloading task definition: $TASK_DEF_ARN"
         
-        if aws ecs describe-task-definition \
-          --task-definition "$TASK_DEF_FAMILY" \
+        aws ecs describe-task-definition \
+          --task-definition "$TASK_DEF_ARN" \
           --query 'taskDefinition' \
-          --output json > task-definition.json; then
-          echo "Successfully downloaded task definition"
-          cat task-definition.json | jq '.containerDefinitions[0].name' || echo "Could not parse container name"
-        else
-          echo "Failed to download task definition, it may not exist yet"
-          echo "Creating minimal task definition..."
-          
-          # Create minimal task definition using jq
-          jq -n \
-            --arg family "$TASK_DEF_FAMILY" \
-            --arg containerName "${{ matrix.service }}-container" \
-            --arg image "${{ steps.build-push.outputs.image_uri }}" \
-            '{
-              family: $family,
-              containerDefinitions: [
-                {
-                  name: $containerName,
-                  image: $image,
-                  memory: 512,
-                  essential: true,
-                  portMappings: [
-                    {
-                      containerPort: 3000,
-                      protocol: "tcp"
-                    }
-                  ]
-                }
-              ],
-              requiresCompatibilities: ["FARGATE"],
-              networkMode: "awsvpc",
-              cpu: "256",
-              memory: "512"
-            }' > task-definition.json
-        fi
+          --output json > task-definition.json
+        
+        echo "Successfully downloaded task definition"
+        
+        # Show container info for debugging
+        echo "Container definitions:"
+        cat task-definition.json | jq '.containerDefinitions[] | {name: .name, image: .image}'
 
-    - name: Update task definition with new image
-      if: inputs.task_definition_family != ''
+    - name: Update task definition with new image  
       id: update-task-def
-      uses: aws-actions/amazon-ecs-render-task-definition@v1
-      with:
-        task-definition: task-definition.json
-        container-name: ${{ matrix.service }}-container
-        image: ${{ steps.build-push.outputs.image_uri }}
+      run: |
+        # Get the current image URI we built
+        NEW_IMAGE="${{ inputs.ecr_base_uri }}/${{ matrix.service }}:${{ github.sha }}"
+        
+        # Update the task definition with the new image
+        # We'll update the first container (assuming single container per task)
+        jq --arg newImage "$NEW_IMAGE" \
+           '.containerDefinitions[0].image = $newImage' \
+           task-definition.json > new-task-definition.json
+        
+        # Remove fields that shouldn't be in the registration
+        jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .placementConstraints, .compatibilities, .registeredAt, .registeredBy)' \
+           new-task-definition.json > final-task-definition.json
+        
+        echo "Updated task definition with image: $NEW_IMAGE"
+        echo "task-definition=final-task-definition.json" >> $GITHUB_OUTPUT
 
     - name: Deploy to ECS
-      if: inputs.task_definition_family != '' && inputs.ecs_service_name != '' && inputs.ecs_cluster_name != ''
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.update-task-def.outputs.task-definition }}
-        service: ${{ inputs.ecs_service_name }}-${{ matrix.service }}
+        service: ${{ matrix.ecs_service_name }}
         cluster: ${{ inputs.ecs_cluster_name }}
         wait-for-service-stability: true
 
     - name: Service deployment summary
       run: |
         echo "### ${{ matrix.service }} Service Deployment Complete ✅" >> $GITHUB_STEP_SUMMARY
-        echo "**New Image:** ${{ steps.build-push.outputs.image_uri }}" >> $GITHUB_STEP_SUMMARY
-        if [[ "${{ inputs.ecs_service_name }}" != "" ]]; then
-          echo "**Service:** ${{ inputs.ecs_service_name }}-${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Cluster:** ${{ inputs.ecs_cluster_name }}" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "**Note:** ECS service update skipped (no service configuration provided)" >> $GITHUB_STEP_SUMMARY
-        fi
+        echo "**New Image:** ${{ inputs.ecr_base_uri }}/${{ matrix.service }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Service:** ${{ matrix.ecs_service_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Cluster:** ${{ inputs.ecs_cluster_name }}" >> $GITHUB_STEP_SUMMARY

@@ -25,12 +25,12 @@ jobs:
       run:
         working-directory: ./infra/terraform
     outputs:
-      ecr_repo_uri: ${{ steps.terraform-output.outputs.ecr_repo_uri }}
-      video_api_image: ${{ steps.terraform-output.outputs.video_api_image }}
-      worker_image: ${{ steps.terraform-output.outputs.worker_image }}
+      ecr_base_uri: ${{ steps.terraform-output.outputs.ecr_base_uri }}
       ecs_cluster_name: ${{ steps.terraform-output.outputs.ecs_cluster_name }}
-      ecs_service_name: ${{ steps.terraform-output.outputs.ecs_service_name }}
-      task_definition_family: ${{ steps.terraform-output.outputs.task_definition_family }}
+      ecs_video_service_name: ${{ steps.terraform-output.outputs.ecs_video_service_name }}
+      ecs_worker_service_name: ${{ steps.terraform-output.outputs.ecs_worker_service_name }}
+      ecs_video_task_definition_arn: ${{ steps.terraform-output.outputs.ecs_video_task_definition_arn }}
+      ecs_worker_task_definition_arn: ${{ steps.terraform-output.outputs.ecs_worker_task_definition_arn }}
     
     steps:
     - name: Checkout
@@ -102,32 +102,22 @@ jobs:
     - name: Get Terraform Outputs
       id: terraform-output
       run: |
-        # Capture ECR repository URI and other important outputs
-        ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-        ECR_REPO_URI="$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.PROJECT_NAME }}-prod"
-        
-        echo "ecr_repo_uri=$ECR_REPO_URI" >> $GITHUB_OUTPUT
-        echo "video_api_image=$ECR_REPO_URI/video" >> $GITHUB_OUTPUT
-        echo "worker_image=$ECR_REPO_URI/worker" >> $GITHUB_OUTPUT
-        
-        # Try to get outputs from terraform if they exist
-        if terraform output ecs_cluster_name > /dev/null 2>&1; then
-          echo "ecs_cluster_name=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
-        fi
-        if terraform output ecs_service_name > /dev/null 2>&1; then
-          echo "ecs_service_name=$(terraform output -raw ecs_service_name)" >> $GITHUB_OUTPUT
-        fi
-        if terraform output task_definition_family > /dev/null 2>&1; then
-          echo "task_definition_family=$(terraform output -raw task_definition_family)" >> $GITHUB_OUTPUT
-        fi
+        # Capture outputs from terraform
+        echo "ecr_base_uri=$(terraform output -raw ecr_base_uri)" >> $GITHUB_OUTPUT
+        echo "ecs_cluster_name=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
+        echo "ecs_video_service_name=$(terraform output -raw ecs_video_service_name)" >> $GITHUB_OUTPUT
+        echo "ecs_worker_service_name=$(terraform output -raw ecs_worker_service_name)" >> $GITHUB_OUTPUT
+        echo "ecs_video_task_definition_arn=$(terraform output -raw ecs_video_task_definition_arn)" >> $GITHUB_OUTPUT
+        echo "ecs_worker_task_definition_arn=$(terraform output -raw ecs_worker_task_definition_arn)" >> $GITHUB_OUTPUT
 
     - name: Output Infrastructure Info
       run: |
         echo "### Infrastructure Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**ECR Repository URI:** ${{ steps.terraform-output.outputs.ecr_repo_uri }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Video API Image:** ${{ steps.terraform-output.outputs.video_api_image }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Worker Image:** ${{ steps.terraform-output.outputs.worker_image }}" >> $GITHUB_STEP_SUMMARY
+        echo "**ECR Base URI:** ${{ steps.terraform-output.outputs.ecr_base_uri }}" >> $GITHUB_STEP_SUMMARY
+        echo "**ECS Cluster:** ${{ steps.terraform-output.outputs.ecs_cluster_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Video Service:** ${{ steps.terraform-output.outputs.ecs_video_service_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Worker Service:** ${{ steps.terraform-output.outputs.ecs_worker_service_name }}" >> $GITHUB_STEP_SUMMARY
 
     - name: Trigger Service Deployment
       uses: actions/github-script@v7
@@ -140,10 +130,12 @@ jobs:
             workflow_id: 'deploy-service.yml',
             ref: 'main',
             inputs: {
-              ecr_repo_uri: '${{ steps.terraform-output.outputs.ecr_repo_uri }}',
+              ecr_base_uri: '${{ steps.terraform-output.outputs.ecr_base_uri }}',
               ecs_cluster_name: '${{ steps.terraform-output.outputs.ecs_cluster_name }}',
-              ecs_service_name: '${{ steps.terraform-output.outputs.ecs_service_name }}',
-              task_definition_family: '${{ steps.terraform-output.outputs.task_definition_family }}'
+              ecs_video_service_name: '${{ steps.terraform-output.outputs.ecs_video_service_name }}',
+              ecs_worker_service_name: '${{ steps.terraform-output.outputs.ecs_worker_service_name }}',
+              ecs_video_task_definition_arn: '${{ steps.terraform-output.outputs.ecs_video_task_definition_arn }}',
+              ecs_worker_task_definition_arn: '${{ steps.terraform-output.outputs.ecs_worker_task_definition_arn }}'
             }
           });
           console.log('Triggered service deployment workflow');
